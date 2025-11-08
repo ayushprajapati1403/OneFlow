@@ -1,0 +1,304 @@
+{
+  "info": {
+    "_postman_id": "e7f1b802-8e7b-4fe9-97b5-2b446ddb19e2",
+    "name": "OneFlow Auth API",
+    "description": "Postman collection covering all OneFlow Auth endpoints.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Public Auth",
+      "item": [
+        {
+          "name": "Sign Up",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Jane Admin\",\n  \"email\": \"jane.admin@example.com\",\n  \"password\": \"Admin@123\",\n  \"role\": \"admin\",\n  \"hourly_rate\": 100\n}"
+            },
+            "url": {
+              "raw": "{{auth_base_url}}/signup",
+              "host": [
+                "{{auth_base_url}}"
+              ],
+              "path": [
+                "signup"
+              ]
+            },
+            "description": "Registers a new user. The very first account created becomes an admin automatically."
+          },
+          "response": []
+        },
+        {
+          "name": "Sign In",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"jane.admin@example.com\",\n  \"password\": \"Admin@123\"\n}"
+            },
+            "url": {
+              "raw": "{{auth_base_url}}/login",
+              "host": [
+                "{{auth_base_url}}"
+              ],
+              "path": [
+                "login"
+              ]
+            },
+            "description": "Authenticates a user and returns an access token."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Authenticated User",
+      "item": [
+        {
+          "name": "Get Profile",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{auth_base_url}}/me",
+              "host": [
+                "{{auth_base_url}}"
+              ],
+              "path": [
+                "me"
+              ]
+            },
+            "description": "Retrieves the authenticated user's profile."
+          },
+          "response": []
+        },
+        {
+          "name": "Change Password",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"currentPassword\": \"Admin@123\",\n  \"newPassword\": \"Admin@456\"\n}"
+            },
+            "url": {
+              "raw": "{{auth_base_url}}/me/password",
+              "host": [
+                "{{auth_base_url}}"
+              ],
+              "path": [
+                "me",
+                "password"
+              ]
+            },
+            "description": "Changes the password for the authenticated user."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Admin User Management",
+      "item": [
+        {
+          "name": "List Users",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{admin_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{auth_base_url}}/users?page=1&limit=20&search=",
+              "host": [
+                "{{auth_base_url}}"
+              ],
+              "path": [
+                "users"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "20"
+                },
+                {
+                  "key": "search",
+                  "value": ""
+                }
+              ]
+            },
+            "description": "Lists users with optional pagination and search filters."
+          },
+          "response": []
+        },
+        {
+          "name": "Create User",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{admin_token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Tom Member\",\n  \"email\": \"tom.member@example.com\",\n  \"password\": \"Member@123\",\n  \"role\": \"team_member\",\n  \"hourly_rate\": 45\n}"
+            },
+            "url": {
+              "raw": "{{auth_base_url}}/users",
+              "host": [
+                "{{auth_base_url}}"
+              ],
+              "path": [
+                "users"
+              ]
+            },
+            "description": "Creates a user as an admin. Role defaults to team_member if omitted or invalid."
+          },
+          "response": []
+        },
+        {
+          "name": "Get User by ID",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{admin_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{auth_base_url}}/users/{{user_id}}",
+              "host": [
+                "{{auth_base_url}}"
+              ],
+              "path": [
+                "users",
+                "{{user_id}}"
+              ]
+            },
+            "description": "Retrieves details for a specific user by ID."
+          },
+          "response": []
+        },
+        {
+          "name": "Update User",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{admin_token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Tom Member Updated\",\n  \"email\": \"tom.member@example.com\",\n  \"role\": \"project_manager\",\n  \"hourly_rate\": 60,\n  \"password\": \"Member@456\"\n}"
+            },
+            "url": {
+              "raw": "{{auth_base_url}}/users/{{user_id}}",
+              "host": [
+                "{{auth_base_url}}"
+              ],
+              "path": [
+                "users",
+                "{{user_id}}"
+              ]
+            },
+            "description": "Updates an existing user. Only admins can access this endpoint."
+          },
+          "response": []
+        },
+        {
+          "name": "Delete User",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{admin_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{auth_base_url}}/users/{{user_id}}",
+              "host": [
+                "{{auth_base_url}}"
+              ],
+              "path": [
+                "users",
+                "{{user_id}}"
+              ]
+            },
+            "description": "Deletes a user by ID. Admins cannot delete themselves."
+          },
+          "response": []
+        }
+      ]
+    }
+  ],
+  "variable": [
+    {
+      "key": "auth_base_url",
+      "value": "http://localhost:3000/oneflow/api/v1/Auth"
+    },
+    {
+      "key": "access_token",
+      "value": "",
+      "description": "Access token for the authenticated user."
+    },
+    {
+      "key": "admin_token",
+      "value": "",
+      "description": "Access token for an admin-level user."
+    },
+    {
+      "key": "user_id",
+      "value": "1",
+      "description": "User ID used in admin operations."
+    }
+  ]
+}
+
