@@ -1,0 +1,167 @@
+OneFlow Frontend Execution Plan
+================================
+
+1. Product Vision & Guiding Principles
+--------------------------------------
+- Deliver a unified React + TypeScript workspace where planning, execution, and billing coexist without context switching.
+- Leverage the salon platform’s proven tenant-aware patterns (Auth, Organizations, Branches, Bookings) to accelerate delivery and keep UX consistent for admins already using TrueAtoms.
+- Keep Bolt AI prompts minimal by generating feature slices (layout, data hooks, UI sections) independently and composing them through a typed module index.
+- Design every screen to surface project profitability in under three clicks and to make financial documents discoverable from both global and project-scoped entry points.
+
+2. Technology Stack & Libraries
+-------------------------------
+- **App framework**: React 18 + Vite (fast dev, simple asset pipeline) with React Router v6 for nested routing. (If SPA must sit in existing salon shell, wrap in `<AppShell>` component).
+- **Language**: TypeScript strict mode.
+- **State & Data**: React Query for server cache + Zustand for lightweight UI state (modals, filters).
+- **Forms**: React Hook Form + Zod schemas (reuse existing validation patterns from salon customer/package onboarding).
+- **UI Kit**: Reuse salon design tokens (colors, typography, spacing) and primitive components (Button, Badge, TagInput, Drawer) defined in the TrueAtoms UI layer. Extend with new composables (ProgressPill, FinanceBadge) when needed.
+- **Charts**: Recharts (already used in booking analytics) for KPI cards and dashboards.
+- **Realtime/Collab**: Socket.io client (aligns with backend capability) for live task board updates.
+- **Theming & I18n**: Stick with current CSS variables + i18n setup from salon admin to ensure minimal new styling work and localisation parity.
+
+3. Application Shell & Navigation
+---------------------------------
+- **Persistent top bar**: Project switcher, global search (projects/tasks/SO/PO/invoices), notification bell, user menu.
+- **Left rail**: Role-aware menu (Dashboard, Projects, Tasks, Analytics, Settings, Timesheets, Profile). Badge counts for pending approvals/blocked tasks.
+- **Context panel**: Right-side collapsible drawer for secondary info (recent activity, approvals, AI copilots).
+- **Route hierarchy**:
+  - `/auth/*` → login/signup/reset (public).
+  - `/app` → guarded shell; nested routes load role dashboards.
+  - `/app/projects/*` → feature-rich nested structure (list + detail).
+  - `/app/settings/*` → financial document hubs.
+
+4. Cross-Cutting Systems
+------------------------
+- **Auth guard**: Reuse existing `withAuth` HOC + JWT storage pattern from salon admin login; extend role gate to recognise `PROJECT_MANAGER`, `TEAM_MEMBER`, `SALES_FINANCE`, `ADMIN`.
+- **Multi-tenant header**: Reuse Organization/Branch selectors; adapt to “Project portfolio” context, so Tenant/Org drives API scoping for projects.
+- **Notifications**: Extend salon toast/snackbar service to support project alerts (blocked tasks, invoices due).
+- **File handling**: Hook into S3 uploader service already used for salon receipts for task attachments/expense receipts.
+- **Error boundaries**: Wrap Project detail routes to capture API errors and show retry CTA.
+- **Skeleton loaders**: Recycle skeleton cards/table shimmer from booking list to keep experience consistent.
+
+5. Page-Level Execution Plan
+----------------------------
+
+5.1 Authentication & Access
+- Pages: Login, Signup (Admin-only), Forgot/Reset.
+- Reuse salon Auth layout; update copy and role options during signup (Project Manager, Team Member, Sales/Finance).
+- Post-login redirect uses role mapping service to land users on their tailored dashboard.
+
+5.2 Role-Based Dashboards (`/app/home`)
+- **Project Manager view**: Project pipeline tiles (Planned/In Progress/Completed/On Hold), KPI widgets (Active Projects, Delayed Tasks, Hours Logged This Week, Revenue Earned). Include “Needs Attention” list (blocked tasks, overdue invoices).
+- **Team Member view**: My Tasks grouped by state, quick timesheet logging, upcoming deadlines.
+- **Sales/Finance view**: Billing queue (draft invoices, pending approvals), recent cashflow chart.
+- **Admin view**: Aggregated overview + management shortcuts.
+- Filters persist via URL search params and Zustand store (Reuse filter chip pattern from bookings list).
+
+5.3 Projects Module (`/app/projects`)
+- **List page**:
+  - Cards/list toggle (reuse branch cards/grid layout). Each card shows progress bar, budget usage, project manager avatar.
+  - Filter bar (status, PM, customer, start/end date) built with shared `FilterPopover`.
+  - Bulk actions (assign PM, change status) for Admins.
+- **Create/Edit wizard**:
+  - 3-step wizard (Overview → Team & Schedule → Financial Baseline). Reuse salon package creation stepper.
+  - Autosave draft logic using React Query mutations with debounce.
+- **Project detail layout** (tabbed, sticky header):
+  - **Overview**: Milestones timeline, budget vs actual ring, quick stats (SO linked, invoices sent).
+  - **Plan**: Task list grouped by phases, dependency matrix (table like service combos). Buttons to add tasks/milestones.
+  - **Execute**: Kanban board (columns: New, In Progress, Blocked, Done). Drag & drop using existing DragDropContext from salon room scheduling.
+  - **Timesheets**: Daily/weekly calendar view (reuse appointment calendar grid). Inline hour logging modal.
+  - **Financials (Bill & Track Money)**: Split into Sales Orders, Purchase Orders, Customer Invoices, Vendor Bills, Expenses; each is a tab containing a datagrid filtered to project context, plus quick-create modals that prefill project ID. Include profitability summary (Revenue, Cost, Profit).
+  - **Analytics**: Charts for project progress %, burnup, resource utilization, cost vs revenue; embed scenario toggles (fixed vs T&M).
+  - **Settings**: Link/unlink documents, manage integration toggles, permission overrides.
+- **Activity timeline**: Right drawer showing chronologically combined events (task updates, financial docs). Reuse timeline component from salon appointment history.
+- **Collaboration**: Comment threads on tasks/milestones using existing chat bubble styles.
+
+5.4 Global Tasks Workspace (`/app/tasks`)
+- Unified list of tasks with persona-specific filters (My Tasks, Team Tasks, Unassigned).
+- Bulk status updates, inline quick log hours.
+- Secondary panel shows linked project financial state to highlight impact.
+- Saved views persisted for each user (reuse saved filter logic from salon reports).
+
+5.5 Timesheets (`/app/timesheets`)
+- Calendar + table hybrid view (week switcher). Each entry shows billable flag, approval status.
+- Quick-add modal with preset durations; autoprefill based on last activity (React Query prefetch with tasks endpoint).
+- Approval queue for Project Managers (toggle to show team submissions). Expose export to CSV.
+
+5.6 Analytics (`/app/analytics`)
+- Overview KPIs (Total Projects, Tasks Completed, Hours Logged, Billable vs Non-billable).
+- Chart bundles: Portfolio progress heatmap, resource utilization stacked bar, project cost vs revenue line.
+- Scenario filters (time range, organization, customer).
+- Drill-down cards link back to project detail analytics.
+
+5.7 Settings / Financial Document Hubs (`/app/settings/*`)
+- Subroutes: `sales-orders`, `purchase-orders`, `customer-invoices`, `vendor-bills`, `expenses`, (`products` optional).
+- Each page uses shared “Entity Workspace” template:
+  - Search bar (number, partner, amount, state).
+  - Advanced filter drawer (date range pickers, partner multi-select, state, project).
+  - Group-by chips; Data grid with column configuration saved per user.
+  - Create/Link buttons open side drawer forms that mirror salon booking modal style.
+- Individual document view uses two-column layout: primary form + related project summary.
+
+5.8 Profile & Setup (`/app/profile`)
+- Personal info form (reuse profile form component), change password, notification preferences.
+- Display hourly rate (for timesheet cost calculations) – editable by Admin/PM.
+
+6. Component & Hook Reuse Strategy
+----------------------------------
+- **List engines**: Repurpose salon `EntityTable` (sorting, pagination) for projects, tasks, financial docs.
+- **Form kit**: Continue using `FormSection`, `InputField`, `TagSelector` from salon onboarding flows.
+- **Wizard/Stepper**: The package creation wizard is adaptable for project creation.
+- **Cards**: Branch cards → Project cards with site-specific metrics.
+- **Timeline & Activity feed**: Borrow from appointment history (vertical timeline + icons).
+- **Calendar grid**: Appointment calendar repurposed for timesheet weekly grid.
+- **Dialogs & Drawers**: Shared `SlidingDrawer` for create/edit forms; `ConfirmDialog` for approvals.
+- **Upload widget**: Expense/Ticket upload uses existing receipt uploader with drag-and-drop preview.
+- **Role guard hook**: Extend `useRoleGate` hook to cover new roles without reimplementing auth logic.
+
+7. Data Contracts & Backend Integration Notes
+---------------------------------------------
+- Adopt existing API response pattern (`{ status, message, data }`); wrap with `useApi` hook that converts to typed DTOs.
+- Define TypeScript interfaces mirroring backend contracts:
+  - `Project`, `Task`, `Milestone`, `TimesheetEntry`, `SalesOrder`, `PurchaseOrder`, `Invoice`, `VendorBill`, `Expense`.
+- Use React Query keys scoped by tenant/org/project to align with caching strategy.
+- Hook into Node backend using service modules grouped by domain (`services/projects.ts`, etc.). Each exports typed fetchers and mutation functions.
+- Implement optimistic updates for board drag/drop and timesheet logging; fallback to server reconciliation.
+- WebSocket channel naming: `/projects/{projectId}/board`, `/projects/{projectId}/financials` for live updates.
+- Ensure all forms respect backend enum values defined in existing constants (task states, invoice status) to avoid mismatches.
+
+8. Bolt AI Prompting Strategy
+-----------------------------
+- Generate shell components with minimal prompts: instruct Bolt to scaffold `ProjectListPage` (layout only), `ProjectDetailTabs`, `KanbanColumn`.
+- Keep prompts under ~200 tokens by referencing shared atoms (e.g., “use `<EntityTable>` from shared library, columns: ...”).
+- Compose final pages manually by stitching generated sections to respect business logic and reuse existing hooks.
+- Maintain a `scripts/scaffold.ts` helper to auto-register new routes/components to reduce manual wiring.
+
+9. Hackathon X-Factor: FlowPilot Scenario Studio
+-----------------------------------------------
+- Introduce “FlowPilot” inside each project and in Analytics – an AI-assisted scenario simulator leveraging historic salon booking data patterns for cost predictions.
+- Features:
+  - One-click “Suggest staffing plan” using blended utilization data (hours logged + role rates).
+  - “What-if” slider adjusting milestone dates/budget; recalculates revenue recognition and vendor spend in real time.
+  - Generates recommended Sales Order milestones and Purchase Orders based on similar past projects.
+- UI Implementation:
+  - Floating action button opens right drawer.
+  - Drawer hosts chat-like interface (reuses salon customer chatbot styles) plus mini visualisations.
+  - Export recommendations directly into project plan (creates draft tasks/financial docs ready for approval).
+- Differentiator: No other team links operational data to financial scenario modeling in-app; leverages existing salon knowledge to provide cross-module intelligence.
+
+10. Delivery Milestones & Testing
+---------------------------------
+- **Sprint 0 (Hackathon day 1)**: Set up shell, navigation, auth guard, Project list skeleton.
+- **Sprint 1**: Project detail tabs (Plan, Execute, Financials), Kanban interactions, React Query integration.
+- **Sprint 2**: Financial document hubs, global Settings pages, timesheet module.
+- **Sprint 3**: Analytics dashboards, FlowPilot scenario studio, polish and testing.
+- **Testing**: Jest + React Testing Library for critical flows (project creation, task update, invoice creation). Cypress smoke tests for end-to-end navigation.
+- **Performance checks**: Lighthouse pass on core pages; ensure code splitting per route to keep first load under 200KB.
+
+11. Handoff Checklist
+---------------------
+- Component inventory documented in Notion (map to existing salon atoms).
+- API contract table ready for backend team (endpoints, payloads, response examples).
+- Design markers handed to UI/UX (Figma or Excalidraw board aligned with provided mockup).
+- Deployment notes: Integrate into existing CI pipeline; reuse env variable naming (`VITE_API_URL`, `VITE_SOCKET_URL`).
+
+This plan keeps the frontend modular, maximizes reuse of the salon platform’s ecosystem, and adds a standout FlowPilot experience that ties planning to financial intelligence—all ready for Bolt AI-assisted rapid implementation during the hackathon.
+
+
