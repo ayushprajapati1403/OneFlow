@@ -1,0 +1,28 @@
+{
+  "AUTH": {
+    "SIGNUP_SUCCESS": "Account created successfully.",
+    "LOGIN_SUCCESS": "Login successful.",
+    "EMAIL_EXISTS": "A user with this email already exists.",
+    "ONLY_ADMIN_CREATE": "Only an admin can create additional users.",
+    "USER_LIST": "User list retrieved successfully.",
+    "USER_DETAILS": "User details retrieved successfully.",
+    "USER_CREATED": "User created successfully.",
+    "USER_UPDATED": "User updated successfully.",
+    "USER_DELETED": "User deleted successfully.",
+    "CANNOT_DELETE_SELF": "You cannot delete your own account.",
+    "PROFILE_RETRIEVED": "Profile retrieved successfully.",
+    "PASSWORD_UPDATED": "Password updated successfully.",
+    "PASSWORD_MISMATCH": "Current password is incorrect.",
+    "NOT_AUTHENTICATED": "You must be logged in to perform this action.",
+    "INVALID_CREDENTIALS": "Invalid email or password.",
+    "USER_NOT_FOUND": "User not found.",
+    "INSUFFICIENT_PERMISSIONS": "You do not have permission to perform this action."
+  },
+  "VALIDATIONS": {
+    "required": "%s is required.",
+    "invalid": "%s is invalid.",
+    "min_length": "%s must be at least %s characters long."
+  },
+  "SERVER_ERROR_MESSAGE": "Something went wrong. Please try again later."
+}
+

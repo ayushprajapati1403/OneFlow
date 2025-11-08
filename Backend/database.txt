@@ -1,0 +1,165 @@
+-- ==============================
+-- 1. CORE & USERS
+-- ==============================
+
+CREATE TYPE user_role AS ENUM ('admin', 'project_manager', 'team_member', 'finance');
+
+CREATE TABLE users (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(255) NOT NULL,
+    email VARCHAR(255) UNIQUE NOT NULL,
+    password_hash TEXT NOT NULL,
+    role user_role DEFAULT 'team_member',
+    hourly_rate DECIMAL(10,2) DEFAULT 0.00, -- Internal cost rate for profitability calc
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+-- ==============================
+-- 2. CONTACTS (Clients & Vendors)
+-- ==============================
+
+CREATE TYPE contact_type AS ENUM ('client', 'vendor', 'both');
+
+CREATE TABLE contacts (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(255) NOT NULL, -- Company or Person name
+    type contact_type NOT NULL,
+    email VARCHAR(255),
+    phone VARCHAR(50),
+    address TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+-- ==============================
+-- 3. PROJECTS CORE
+-- ==============================
+
+CREATE TYPE project_status AS ENUM ('planned', 'active', 'on_hold', 'completed');
+
+CREATE TABLE projects (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(255) NOT NULL,
+    description TEXT,
+    client_id INTEGER REFERENCES contacts(id), -- Link to who is paying
+    manager_id INTEGER REFERENCES users(id),  -- Link to PM
+    status project_status DEFAULT 'planned',
+    start_date DATE,
+    end_date DATE,
+    budget DECIMAL(15,2) DEFAULT 0.00, -- Overall budget target
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+-- ==============================
+-- 4. TASKS & TIME
+-- ==============================
+
+CREATE TYPE task_status AS ENUM ('todo', 'in_progress', 'review', 'done');
+CREATE TYPE task_priority AS ENUM ('low', 'medium', 'high');
+
+CREATE TABLE tasks (
+    id SERIAL PRIMARY KEY,
+    project_id INTEGER REFERENCES projects(id) ON DELETE CASCADE, -- If project deleted, tasks go too
+    title VARCHAR(255) NOT NULL,
+    description TEXT,
+    status task_status DEFAULT 'todo',
+    priority task_priority DEFAULT 'medium',
+    assignee_id INTEGER REFERENCES users(id),
+    due_date TIMESTAMP WITH TIME ZONE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE timesheets (
+    id SERIAL PRIMARY KEY,
+    project_id INTEGER REFERENCES projects(id) ON DELETE CASCADE, -- Link directly for easy cost calc
+    task_id INTEGER REFERENCES tasks(id),
+    user_id INTEGER REFERENCES users(id),
+    date DATE NOT NULL DEFAULT CURRENT_DATE,
+    hours DECIMAL(5,2) NOT NULL,
+    description TEXT,
+    billable BOOLEAN DEFAULT TRUE,
+    cost_rate DECIMAL(10,2) NOT NULL, -- Snapshot of user's rate at time of logging
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+-- ==============================
+-- 5. FINANCE (Money In & Out)
+-- ==============================
+-- Note: Using JSONB for 'items' to save creating 5 extra tables in a hackathon.
+-- Items JSON structure example: [{"desc": "Design", "qty": 1, "price": 500}, {...}]
+
+CREATE TYPE doc_status AS ENUM ('draft', 'sent', 'approved', 'paid', 'declined');
+
+-- MONEY IN (Revenue Planned)
+CREATE TABLE sales_orders (
+    id SERIAL PRIMARY KEY,
+    project_id INTEGER REFERENCES projects(id) ON DELETE CASCADE,
+    client_id INTEGER REFERENCES contacts(id),
+    date DATE DEFAULT CURRENT_DATE,
+    status doc_status DEFAULT 'draft',
+    items JSONB DEFAULT '[]', -- The line items
+    total_amount DECIMAL(15,2) DEFAULT 0.00,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+-- MONEY IN (Revenue Actual)
+CREATE TABLE invoices (
+    id SERIAL PRIMARY KEY,
+    project_id INTEGER REFERENCES projects(id),
+    sales_order_id INTEGER REFERENCES sales_orders(id), -- Optional link back to SO
+    client_id INTEGER REFERENCES contacts(id),
+    date DATE DEFAULT CURRENT_DATE,
+    due_date DATE,
+    status doc_status DEFAULT 'draft', -- draft -> sent -> paid
+    items JSONB DEFAULT '[]',
+    total_amount DECIMAL(15,2) DEFAULT 0.00,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+-- MONEY OUT (Cost Planned)
+CREATE TABLE purchase_orders (
+    id SERIAL PRIMARY KEY,
+    project_id INTEGER REFERENCES projects(id),
+    vendor_id INTEGER REFERENCES contacts(id),
+    date DATE DEFAULT CURRENT_DATE,
+    status doc_status DEFAULT 'draft',
+    items JSONB DEFAULT '[]',
+    total_amount DECIMAL(15,2) DEFAULT 0.00,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+-- MONEY OUT (Cost Actual - Vendors)
+CREATE TABLE vendor_bills (
+    id SERIAL PRIMARY KEY,
+    project_id INTEGER REFERENCES projects(id),
+    purchase_order_id INTEGER REFERENCES purchase_orders(id), -- Optional link
+    vendor_id INTEGER REFERENCES contacts(id),
+    date DATE DEFAULT CURRENT_DATE,
+    due_date DATE,
+    status doc_status DEFAULT 'draft', -- draft -> approved -> paid
+    items JSONB DEFAULT '[]',
+    total_amount DECIMAL(15,2) DEFAULT 0.00,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+-- MONEY OUT (Cost Actual - Team)
+CREATE TABLE expenses (
+    id SERIAL PRIMARY KEY,
+    project_id INTEGER REFERENCES projects(id),
+    user_id INTEGER REFERENCES users(id), -- Employee who paid
+    description TEXT NOT NULL,
+    amount DECIMAL(10,2) NOT NULL,
+    date DATE DEFAULT CURRENT_DATE,
+    billable BOOLEAN DEFAULT FALSE, -- Can we charge this back to the client?
+    status doc_status DEFAULT 'draft', -- draft -> approved -> paid (reimbursed)
+    receipt_url TEXT, -- For image upload if you have time
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
