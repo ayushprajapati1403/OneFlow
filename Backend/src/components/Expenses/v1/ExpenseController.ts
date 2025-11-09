@@ -86,20 +86,20 @@ class ExpenseController {
     return ALLOWED_STATUS.includes(normalized) ? normalized : EXPENSE_STATUS.DRAFT
   }
 
-  private async ensureProject(uuid?: string) {
+  private async ensureProject(uuid: string | undefined, companyId: number) {
     if (!uuid) {
       throw new Error('INVALID_PROJECT')
     }
-    const project = await ProjectModel.findByUuid(uuid)
+    const project = await ProjectModel.findByUuid(uuid, companyId)
     if (!project) {
       throw new Error('INVALID_PROJECT')
     }
     return project
   }
 
-  private async ensureUser(uuid?: string | null) {
+  private async ensureUser(uuid: string | null | undefined, companyId: number) {
     if (!uuid) return null
-    const user = await authModel.findByUuid(uuid)
+    const user = await authModel.findByUuid(uuid, companyId)
     if (!user) {
       throw new Error('INVALID_USER')
     }
@@ -108,6 +108,11 @@ class ExpenseController {
 
   async list(req: CustomRequest, res: CustomResponse) {
     try {
+      const companyId = req.user?.company_id
+      if (!companyId) {
+        return createResponse1({ res, status: STATUS_CODES.FORBIDDEN, message: 'Company context is required.' })
+      }
+
       const page = Math.max(Number(req.query.page ?? 1), 1)
       const limit = Math.max(Number(req.query.limit ?? EXPENSE_DEFAULT_LIMIT), 1)
       const offset = (page - 1) * limit
@@ -120,13 +125,13 @@ class ExpenseController {
 
       let projectId: number | undefined
       if (req.query.project_uuid) {
-        const project = await this.ensureProject(String(req.query.project_uuid))
+        const project = await this.ensureProject(String(req.query.project_uuid), companyId)
         projectId = project.id
       }
 
       let userId: number | undefined
       if (req.query.user_uuid) {
-        const user = await this.ensureUser(String(req.query.user_uuid))
+        const user = await this.ensureUser(String(req.query.user_uuid), companyId)
         userId = user?.id
       }
 
@@ -141,7 +146,8 @@ class ExpenseController {
         dateTo: req.query.date_to as string,
         search: req.query.search as string,
         limit,
-        offset
+        offset,
+        companyId
       })
 
       return createResponse(res, STATUS_CODES.OK, res.__('EXPENSE.LIST_SUCCESS'), {
@@ -170,10 +176,15 @@ class ExpenseController {
 
   async create(req: CustomRequest, res: CustomResponse) {
     try {
+      const companyId = req.user?.company_id
+      if (!companyId) {
+        return createResponse1({ res, status: STATUS_CODES.FORBIDDEN, message: 'Company context is required.' })
+      }
+
       const { project_uuid, user_uuid, description, amount, date, billable, status, receipt_url } = req.body
 
-      const project = await this.ensureProject(project_uuid)
-      const user = await this.ensureUser(user_uuid)
+      const project = await this.ensureProject(project_uuid, companyId)
+      const user = await this.ensureUser(user_uuid, companyId)
 
       const numericAmount = Number(amount)
       const normalizedStatus = this.normalizeStatus(status)
@@ -187,10 +198,11 @@ class ExpenseController {
         date,
         billable: normalizedBillable,
         status: normalizedStatus,
-        receipt_url: receipt_url ?? null
+        receipt_url: receipt_url ?? null,
+        company_id: companyId
       })
 
-      const hydrated = await ExpenseModel.findByUuid(expense.uuid)
+      const hydrated = await ExpenseModel.findByUuid(expense.uuid, companyId)
       if (!hydrated) {
         throw new Error('CREATION_FAILED')
       }
@@ -217,7 +229,12 @@ class ExpenseController {
   async get(req: CustomRequest, res: CustomResponse) {
     try {
       const { uuid } = req.params
-      const expense = await ExpenseModel.findByUuid(uuid)
+      const companyId = req.user?.company_id
+      if (!companyId) {
+        return createResponse1({ res, status: STATUS_CODES.FORBIDDEN, message: 'Company context is required.' })
+      }
+
+      const expense = await ExpenseModel.findByUuid(uuid, companyId)
       if (!expense) {
         return createResponse1({ res, status: STATUS_CODES.NOT_FOUND, message: res.__('EXPENSE.NOT_FOUND') })
       }
@@ -238,14 +255,19 @@ class ExpenseController {
       const { uuid } = req.params
       const { project_uuid, user_uuid, description, amount, date, billable, status, receipt_url } = req.body
 
-      const existing = await ExpenseModel.findByUuid(uuid)
+      const companyId = req.user?.company_id
+      if (!companyId) {
+        return createResponse1({ res, status: STATUS_CODES.FORBIDDEN, message: 'Company context is required.' })
+      }
+
+      const existing = await ExpenseModel.findByUuid(uuid, companyId)
       if (!existing) {
         return createResponse1({ res, status: STATUS_CODES.NOT_FOUND, message: res.__('EXPENSE.NOT_FOUND') })
       }
 
       let projectId: number | undefined
       if (project_uuid !== undefined) {
-        const project = await this.ensureProject(project_uuid)
+        const project = await this.ensureProject(project_uuid, companyId)
         projectId = project.id
       }
 
@@ -254,7 +276,7 @@ class ExpenseController {
         if (!user_uuid) {
           userId = null
         } else {
-          const user = await this.ensureUser(user_uuid)
+          const user = await this.ensureUser(user_uuid, companyId)
           userId = user?.id ?? null
         }
       }
@@ -286,7 +308,7 @@ class ExpenseController {
         payload.receipt_url = receipt_url
       }
 
-      const updated = await ExpenseModel.updateByUuid(uuid, payload)
+      const updated = await ExpenseModel.updateByUuid(uuid, payload, companyId)
       if (!updated) {
         return createResponse1({ res, status: STATUS_CODES.INTERNAL_SERVER_ERROR, message: res.__('SERVER_ERROR_MESSAGE') })
       }
@@ -313,7 +335,12 @@ class ExpenseController {
   async remove(req: CustomRequest, res: CustomResponse) {
     try {
       const { uuid } = req.params
-      const deleted = await ExpenseModel.deleteByUuid(uuid)
+      const companyId = req.user?.company_id
+      if (!companyId) {
+        return createResponse1({ res, status: STATUS_CODES.FORBIDDEN, message: 'Company context is required.' })
+      }
+
+      const deleted = await ExpenseModel.deleteByUuid(uuid, companyId)
       if (!deleted) {
         return createResponse1({ res, status: STATUS_CODES.NOT_FOUND, message: res.__('EXPENSE.NOT_FOUND') })
       }

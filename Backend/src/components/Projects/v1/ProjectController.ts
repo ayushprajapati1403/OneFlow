@@ -213,8 +213,7 @@ class ProjectController {
       this.validateDateRange(start_date, end_date)
 
       const client = await this.ensureClient(client_uuid, companyId)
-      const manager =
-        manager_uuid !== undefined ? await this.ensureManager(manager_uuid, companyId) : await this.resolveDefaultManager(req)
+      const manager = manager_uuid !== undefined ? await this.ensureManager(manager_uuid, companyId) : await this.resolveDefaultManager(req)
 
       const normalizedBudget = budget !== undefined && budget !== null ? Number(budget) : 0
       if (Number.isNaN(normalizedBudget) || normalizedBudget < 0) {

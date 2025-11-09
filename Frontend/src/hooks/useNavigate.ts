@@ -1,6 +1,18 @@
 import { useState, useCallback } from 'react';
 
-export type Page = 'landing' | 'signin' | 'signup' | 'dashboard' | 'projects' | 'project-detail' | 'tasks' | 'timesheets' | 'analytics' | 'settings';
+export type Page =
+  | 'landing'
+  | 'signin'
+  | 'signup'
+  | 'dashboard'
+  | 'projects'
+  | 'project-detail'
+  | 'tasks'
+  | 'timesheets'
+  | 'analytics'
+  | 'settings'
+  | 'contacts'
+  | 'team';
 
 export function useNavigate() {
   const navigate = useCallback((page: Page, params?: any) => {

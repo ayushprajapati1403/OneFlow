@@ -15,6 +15,7 @@ export interface InvoiceListOptions {
   limit?: number
   offset?: number
   attributes?: FindOptions['attributes']
+  companyId?: number
 }
 
 type InvoiceCreationPayload = {
@@ -26,6 +27,7 @@ type InvoiceCreationPayload = {
   status?: InvoiceStatus
   items?: object[]
   total_amount?: number
+  company_id: number
 }
 
 type InvoiceUpdatePayload = Partial<InvoiceCreationPayload>
@@ -35,9 +37,12 @@ class InvoiceModel {
     return InvoiceSchema.create(payload as any)
   }
 
-  async findByUuid(uuid: string): Promise<InvoiceSchema | null> {
+  async findByUuid(uuid: string, companyId?: number): Promise<InvoiceSchema | null> {
     return InvoiceSchema.findOne({
-      where: { uuid },
+      where: {
+        uuid,
+        ...(companyId ? { company_id: companyId } : {})
+      },
       include: [
         { model: ProjectSchema, as: 'project', attributes: ['uuid', 'name'] },
         { model: SalesOrderSchema, as: 'sales_order', attributes: ['uuid'] },
@@ -48,6 +53,10 @@ class InvoiceModel {
 
   async listInvoices(options: InvoiceListOptions = {}) {
     const where: WhereOptions = {}
+
+    if (options.companyId) {
+      Object.assign(where, { company_id: options.companyId })
+    }
 
     if (options.projectId) {
       Object.assign(where, { project_id: options.projectId })
@@ -99,20 +108,28 @@ class InvoiceModel {
     })
   }
 
-  async updateByUuid(uuid: string, payload: InvoiceUpdatePayload): Promise<InvoiceSchema | null> {
+  async updateByUuid(uuid: string, payload: InvoiceUpdatePayload, companyId?: number): Promise<InvoiceSchema | null> {
     const [updatedCount] = await InvoiceSchema.update(payload as any, {
-      where: { uuid }
+      where: {
+        uuid,
+        ...(companyId ? { company_id: companyId } : {})
+      }
     })
 
     if (!updatedCount) {
       return null
     }
 
-    return this.findByUuid(uuid)
+    return this.findByUuid(uuid, companyId)
   }
 
-  async deleteByUuid(uuid: string): Promise<number> {
-    return InvoiceSchema.destroy({ where: { uuid } })
+  async deleteByUuid(uuid: string, companyId?: number): Promise<number> {
+    return InvoiceSchema.destroy({
+      where: {
+        uuid,
+        ...(companyId ? { company_id: companyId } : {})
+      }
+    })
   }
 }
 

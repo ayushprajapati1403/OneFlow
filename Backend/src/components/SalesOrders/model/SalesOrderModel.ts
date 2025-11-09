@@ -13,6 +13,7 @@ export interface SalesOrderListOptions {
   limit?: number
   offset?: number
   attributes?: FindOptions['attributes']
+  companyId?: number
 }
 
 type SalesOrderCreationPayload = {
@@ -22,6 +23,7 @@ type SalesOrderCreationPayload = {
   status?: SalesOrderStatus
   items?: object[]
   total_amount?: number
+  company_id: number
 }
 
 type SalesOrderUpdatePayload = Partial<SalesOrderCreationPayload>
@@ -31,9 +33,12 @@ class SalesOrderModel {
     return SalesOrderSchema.create(payload as any)
   }
 
-  async findByUuid(uuid: string): Promise<SalesOrderSchema | null> {
+  async findByUuid(uuid: string, companyId?: number): Promise<SalesOrderSchema | null> {
     return SalesOrderSchema.findOne({
-      where: { uuid },
+      where: {
+        uuid,
+        ...(companyId ? { company_id: companyId } : {})
+      },
       include: [
         { model: ProjectSchema, as: 'project', attributes: ['uuid', 'name'] },
         { model: ContactSchema, as: 'client', attributes: ['uuid', 'name', 'type'] }
@@ -43,6 +48,10 @@ class SalesOrderModel {
 
   async listSalesOrders(options: SalesOrderListOptions = {}) {
     const where: WhereOptions = {}
+
+    if (options.companyId) {
+      Object.assign(where, { company_id: options.companyId })
+    }
 
     if (options.projectId) {
       Object.assign(where, { project_id: options.projectId })
@@ -89,20 +98,28 @@ class SalesOrderModel {
     })
   }
 
-  async updateByUuid(uuid: string, payload: SalesOrderUpdatePayload): Promise<SalesOrderSchema | null> {
+  async updateByUuid(uuid: string, payload: SalesOrderUpdatePayload, companyId?: number): Promise<SalesOrderSchema | null> {
     const [updatedCount] = await SalesOrderSchema.update(payload as any, {
-      where: { uuid }
+      where: {
+        uuid,
+        ...(companyId ? { company_id: companyId } : {})
+      }
     })
 
     if (!updatedCount) {
       return null
     }
 
-    return this.findByUuid(uuid)
+    return this.findByUuid(uuid, companyId)
   }
 
-  async deleteByUuid(uuid: string): Promise<number> {
-    return SalesOrderSchema.destroy({ where: { uuid } })
+  async deleteByUuid(uuid: string, companyId?: number): Promise<number> {
+    return SalesOrderSchema.destroy({
+      where: {
+        uuid,
+        ...(companyId ? { company_id: companyId } : {})
+      }
+    })
   }
 }
 

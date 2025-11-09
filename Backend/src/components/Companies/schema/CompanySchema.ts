@@ -47,4 +47,3 @@ CompanySchema.init(
 )
 
 export default CompanySchema
-

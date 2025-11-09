@@ -7,6 +7,7 @@ export interface AuthUser {
   email: string
   role: UserRole
   hourly_rate: number
+  company_id: number | null
   created_at: string
   updated_at: string
 }

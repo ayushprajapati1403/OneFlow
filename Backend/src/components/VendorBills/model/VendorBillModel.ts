@@ -15,6 +15,7 @@ export interface VendorBillListOptions {
   limit?: number
   offset?: number
   attributes?: FindOptions['attributes']
+  companyId?: number
 }
 
 type VendorBillCreationPayload = {
@@ -26,6 +27,7 @@ type VendorBillCreationPayload = {
   status?: VendorBillStatus
   items?: object[]
   total_amount?: number
+  company_id: number
 }
 
 type VendorBillUpdatePayload = Partial<VendorBillCreationPayload>
@@ -35,9 +37,12 @@ class VendorBillModel {
     return VendorBillSchema.create(payload as any)
   }
 
-  async findByUuid(uuid: string): Promise<VendorBillSchema | null> {
+  async findByUuid(uuid: string, companyId?: number): Promise<VendorBillSchema | null> {
     return VendorBillSchema.findOne({
-      where: { uuid },
+      where: {
+        uuid,
+        ...(companyId ? { company_id: companyId } : {})
+      },
       include: [
         { model: ProjectSchema, as: 'project', attributes: ['uuid', 'name'] },
         { model: PurchaseOrderSchema, as: 'purchase_order', attributes: ['uuid'] },
@@ -48,6 +53,10 @@ class VendorBillModel {
 
   async listVendorBills(options: VendorBillListOptions = {}) {
     const where: WhereOptions = {}
+
+    if (options.companyId) {
+      Object.assign(where, { company_id: options.companyId })
+    }
 
     if (options.projectId) {
       Object.assign(where, { project_id: options.projectId })
@@ -99,20 +108,28 @@ class VendorBillModel {
     })
   }
 
-  async updateByUuid(uuid: string, payload: VendorBillUpdatePayload): Promise<VendorBillSchema | null> {
+  async updateByUuid(uuid: string, payload: VendorBillUpdatePayload, companyId?: number): Promise<VendorBillSchema | null> {
     const [updatedCount] = await VendorBillSchema.update(payload as any, {
-      where: { uuid }
+      where: {
+        uuid,
+        ...(companyId ? { company_id: companyId } : {})
+      }
     })
 
     if (!updatedCount) {
       return null
     }
 
-    return this.findByUuid(uuid)
+    return this.findByUuid(uuid, companyId)
   }
 
-  async deleteByUuid(uuid: string): Promise<number> {
-    return VendorBillSchema.destroy({ where: { uuid } })
+  async deleteByUuid(uuid: string, companyId?: number): Promise<number> {
+    return VendorBillSchema.destroy({
+      where: {
+        uuid,
+        ...(companyId ? { company_id: companyId } : {})
+      }
+    })
   }
 }
 

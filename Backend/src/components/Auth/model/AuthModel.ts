@@ -61,7 +61,7 @@ class AuthModel {
     if (options.search?.trim()) {
       const term = `%${options.search.trim()}%`
       conditions[Op.or] = [{ name: { [Op.iLike]: term } }, { email: { [Op.iLike]: term } }]
-        }
+    }
 
     if (options.company_id) {
       conditions.company_id = options.company_id

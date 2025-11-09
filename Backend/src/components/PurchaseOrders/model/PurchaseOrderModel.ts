@@ -13,6 +13,7 @@ export interface PurchaseOrderListOptions {
   limit?: number
   offset?: number
   attributes?: FindOptions['attributes']
+  companyId?: number
 }
 
 type PurchaseOrderCreationPayload = {
@@ -22,6 +23,7 @@ type PurchaseOrderCreationPayload = {
   status?: PurchaseOrderStatus
   items?: object[]
   total_amount?: number
+  company_id: number
 }
 
 type PurchaseOrderUpdatePayload = Partial<PurchaseOrderCreationPayload>
@@ -31,9 +33,12 @@ class PurchaseOrderModel {
     return PurchaseOrderSchema.create(payload as any)
   }
 
-  async findByUuid(uuid: string): Promise<PurchaseOrderSchema | null> {
+  async findByUuid(uuid: string, companyId?: number): Promise<PurchaseOrderSchema | null> {
     return PurchaseOrderSchema.findOne({
-      where: { uuid },
+      where: {
+        uuid,
+        ...(companyId ? { company_id: companyId } : {})
+      },
       include: [
         { model: ProjectSchema, as: 'project', attributes: ['uuid', 'name'] },
         { model: ContactSchema, as: 'vendor', attributes: ['uuid', 'name', 'type'] }
@@ -43,6 +48,10 @@ class PurchaseOrderModel {
 
   async listPurchaseOrders(options: PurchaseOrderListOptions = {}) {
     const where: WhereOptions = {}
+
+    if (options.companyId) {
+      Object.assign(where, { company_id: options.companyId })
+    }
 
     if (options.projectId) {
       Object.assign(where, { project_id: options.projectId })
@@ -89,20 +98,28 @@ class PurchaseOrderModel {
     })
   }
 
-  async updateByUuid(uuid: string, payload: PurchaseOrderUpdatePayload): Promise<PurchaseOrderSchema | null> {
+  async updateByUuid(uuid: string, payload: PurchaseOrderUpdatePayload, companyId?: number): Promise<PurchaseOrderSchema | null> {
     const [updatedCount] = await PurchaseOrderSchema.update(payload as any, {
-      where: { uuid }
+      where: {
+        uuid,
+        ...(companyId ? { company_id: companyId } : {})
+      }
     })
 
     if (!updatedCount) {
       return null
     }
 
-    return this.findByUuid(uuid)
+    return this.findByUuid(uuid, companyId)
   }
 
-  async deleteByUuid(uuid: string): Promise<number> {
-    return PurchaseOrderSchema.destroy({ where: { uuid } })
+  async deleteByUuid(uuid: string, companyId?: number): Promise<number> {
+    return PurchaseOrderSchema.destroy({
+      where: {
+        uuid,
+        ...(companyId ? { company_id: companyId } : {})
+      }
+    })
   }
 }
 

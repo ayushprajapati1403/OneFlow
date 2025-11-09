@@ -5,7 +5,6 @@ import { CustomRequest, CustomResponse } from '../../../environment'
 import { createResponse, createResponse1 } from '../../../utils/helper'
 import { logger } from '../../../utils/logger'
 import sequelize from '../../../utils/dbConfig'
-import ProjectSchema from '../../Projects/schema/ProjectSchema'
 import AuthSchema from '../../Auth/schema/AuthSchema'
 import { TaskSchema } from '../../Tasks/schema'
 
@@ -280,16 +279,16 @@ class AnalyticsController {
     const previousMonth = months.length > 1 ? months[months.length - 2] : undefined
 
     const activeProjects = projectTrendMap[latestMonth]?.active ?? 0
-    const activeProjectsPrev = previousMonth ? projectTrendMap[previousMonth]?.active ?? 0 : 0
+    const activeProjectsPrev = previousMonth ? (projectTrendMap[previousMonth]?.active ?? 0) : 0
 
     const tasksCompleted = taskCompletionMap[latestMonth] ?? 0
-    const tasksCompletedPrev = previousMonth ? taskCompletionMap[previousMonth] ?? 0 : 0
+    const tasksCompletedPrev = previousMonth ? (taskCompletionMap[previousMonth] ?? 0) : 0
 
     const hoursLogged = timesheetHoursMap[latestMonth] ?? 0
-    const hoursLoggedPrev = previousMonth ? timesheetHoursMap[previousMonth] ?? 0 : 0
+    const hoursLoggedPrev = previousMonth ? (timesheetHoursMap[previousMonth] ?? 0) : 0
 
     const revenue = invoiceRevenueMap[latestMonth] ?? 0
-    const revenuePrev = previousMonth ? invoiceRevenueMap[previousMonth] ?? 0 : 0
+    const revenuePrev = previousMonth ? (invoiceRevenueMap[previousMonth] ?? 0) : 0
 
     const [totalUsers, allocatedUsers, overdueTasks] = await Promise.all([
       AuthSchema.count(),
@@ -334,4 +333,3 @@ class AnalyticsController {
 }
 
 export default new AnalyticsController()
-

@@ -1,17 +1,6 @@
 import { QueryInterface, DataTypes, Sequelize } from 'sequelize'
 
-const TARGET_TABLES = [
-  'users',
-  'contacts',
-  'projects',
-  'tasks',
-  'timesheets',
-  'sales_orders',
-  'purchase_orders',
-  'invoices',
-  'vendor_bills',
-  'expenses'
-] as const
+const TARGET_TABLES = ['users', 'contacts', 'projects', 'tasks', 'timesheets', 'sales_orders', 'purchase_orders', 'invoices', 'vendor_bills', 'expenses'] as const
 
 export = {
   up: async (queryInterface: QueryInterface) => {
@@ -79,14 +68,10 @@ export = {
             { transaction }
           )
 
-          await queryInterface.addIndex(
-            table,
-            [columnName],
-            {
-              name: `${table}_company_id_idx`,
-              transaction
-            }
-          )
+          await queryInterface.addIndex(table, [columnName], {
+            name: `${table}_company_id_idx`,
+            transaction
+          })
         }
       }
     })
@@ -113,5 +98,3 @@ export = {
     })
   }
 }
-
-

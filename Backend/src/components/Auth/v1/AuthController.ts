@@ -231,11 +231,11 @@ class AuthController {
       const updated = await authModel.updateById(
         id,
         {
-        name,
-        email,
-        role: this.normalizeRole(role),
-        hourly_rate,
-        ...(passwordHash ? { password_hash: passwordHash } : {})
+          name,
+          email,
+          role: this.normalizeRole(role),
+          hourly_rate,
+          ...(passwordHash ? { password_hash: passwordHash } : {})
         },
         companyId
       )

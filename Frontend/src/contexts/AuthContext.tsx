@@ -7,7 +7,7 @@ type AuthContextType = {
   token: string | null
   loading: boolean
   signIn: (email: string, password: string) => Promise<{ error: ApiError | null }>
-  signUp: (email: string, password: string, fullName: string) => Promise<{ error: ApiError | null }>
+  signUp: (email: string, password: string, fullName: string, companyName: string) => Promise<{ error: ApiError | null }>
   signOut: () => Promise<void>
   refresh: () => Promise<void>
 }
@@ -75,10 +75,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }
 
-  const signUp = async (email: string, password: string, fullName: string) => {
+  const signUp = async (email: string, password: string, fullName: string, companyName: string) => {
     setLoading(true)
     try {
-      const auth = await signup(fullName, email, password)
+      const auth = await signup(fullName, email, password, companyName)
       handleAuthenticated(auth)
       return { error: null }
     } catch (error) {

@@ -74,27 +74,27 @@ class VendorBillController {
     return items.map((item) => (item && typeof item === 'object' ? item : { description: String(item) }))
   }
 
-  private async ensureProject(uuid?: string | null) {
+  private async ensureProject(uuid: string | null | undefined, companyId: number) {
     if (!uuid) return null
-    const project = await ProjectModel.findByUuid(uuid)
+    const project = await ProjectModel.findByUuid(uuid, companyId)
     if (!project) {
       throw new Error('INVALID_PROJECT')
     }
     return project
   }
 
-  private async ensurePurchaseOrder(uuid?: string | null) {
+  private async ensurePurchaseOrder(uuid: string | null | undefined, companyId: number) {
     if (!uuid) return null
-    const order = await PurchaseOrderModel.findByUuid(uuid)
+    const order = await PurchaseOrderModel.findByUuid(uuid, companyId)
     if (!order) {
       throw new Error('INVALID_PURCHASE_ORDER')
     }
     return order
   }
 
-  private async ensureVendor(uuid?: string | null) {
+  private async ensureVendor(uuid: string | null | undefined, companyId: number) {
     if (!uuid) return null
-    const vendor = await ContactModel.findByUuid(uuid)
+    const vendor = await ContactModel.findByUuid(uuid, companyId)
     if (!vendor) {
       throw new Error('INVALID_VENDOR')
     }
@@ -106,6 +106,11 @@ class VendorBillController {
 
   async list(req: CustomRequest, res: CustomResponse) {
     try {
+      const companyId = req.user?.company_id
+      if (!companyId) {
+        return createResponse1({ res, status: STATUS_CODES.FORBIDDEN, message: 'Company context is required.' })
+      }
+
       const page = Math.max(Number(req.query.page ?? 1), 1)
       const limit = Math.max(Number(req.query.limit ?? VENDOR_BILL_DEFAULT_LIMIT), 1)
       const offset = (page - 1) * limit
@@ -118,19 +123,19 @@ class VendorBillController {
 
       let projectId: number | undefined
       if (req.query.project_uuid) {
-        const project = await this.ensureProject(String(req.query.project_uuid))
+        const project = await this.ensureProject(String(req.query.project_uuid), companyId)
         projectId = project?.id
       }
 
       let purchaseOrderId: number | undefined
       if (req.query.purchase_order_uuid) {
-        const order = await this.ensurePurchaseOrder(String(req.query.purchase_order_uuid))
+        const order = await this.ensurePurchaseOrder(String(req.query.purchase_order_uuid), companyId)
         purchaseOrderId = order?.id
       }
 
       let vendorId: number | undefined
       if (req.query.vendor_uuid) {
-        const vendor = await this.ensureVendor(String(req.query.vendor_uuid))
+        const vendor = await this.ensureVendor(String(req.query.vendor_uuid), companyId)
         vendorId = vendor?.id
       }
 
@@ -143,7 +148,8 @@ class VendorBillController {
         dateTo: req.query.date_to as string,
         search: req.query.search as string,
         limit,
-        offset
+        offset,
+        companyId
       })
 
       return createResponse(res, STATUS_CODES.OK, res.__('VENDOR_BILL.LIST_SUCCESS'), {
@@ -177,11 +183,16 @@ class VendorBillController {
 
   async create(req: CustomRequest, res: CustomResponse) {
     try {
+      const companyId = req.user?.company_id
+      if (!companyId) {
+        return createResponse1({ res, status: STATUS_CODES.FORBIDDEN, message: 'Company context is required.' })
+      }
+
       const { project_uuid, purchase_order_uuid, vendor_uuid, date, due_date, status, items, total_amount } = req.body
 
-      const project = await this.ensureProject(project_uuid)
-      const purchaseOrder = await this.ensurePurchaseOrder(purchase_order_uuid)
-      const vendor = await this.ensureVendor(vendor_uuid)
+      const project = await this.ensureProject(project_uuid, companyId)
+      const purchaseOrder = await this.ensurePurchaseOrder(purchase_order_uuid, companyId)
+      const vendor = await this.ensureVendor(vendor_uuid, companyId)
 
       const normalizedStatus = this.normalizeStatus(status)
       const normalizedItems = this.normalizeItems(items)
@@ -195,10 +206,11 @@ class VendorBillController {
         due_date: due_date ?? null,
         status: normalizedStatus,
         items: normalizedItems,
-        total_amount: numericTotal
+        total_amount: numericTotal,
+        company_id: companyId
       })
 
-      const hydrated = await VendorBillModel.findByUuid(vendorBill.uuid)
+      const hydrated = await VendorBillModel.findByUuid(vendorBill.uuid, companyId)
       if (!hydrated) {
         throw new Error('CREATION_FAILED')
       }
@@ -228,7 +240,12 @@ class VendorBillController {
   async get(req: CustomRequest, res: CustomResponse) {
     try {
       const { uuid } = req.params
-      const bill = await VendorBillModel.findByUuid(uuid)
+      const companyId = req.user?.company_id
+      if (!companyId) {
+        return createResponse1({ res, status: STATUS_CODES.FORBIDDEN, message: 'Company context is required.' })
+      }
+
+      const bill = await VendorBillModel.findByUuid(uuid, companyId)
       if (!bill) {
         return createResponse1({ res, status: STATUS_CODES.NOT_FOUND, message: res.__('VENDOR_BILL.NOT_FOUND') })
       }
@@ -249,7 +266,12 @@ class VendorBillController {
       const { uuid } = req.params
       const { project_uuid, purchase_order_uuid, vendor_uuid, date, due_date, status, items, total_amount } = req.body
 
-      const existing = await VendorBillModel.findByUuid(uuid)
+      const companyId = req.user?.company_id
+      if (!companyId) {
+        return createResponse1({ res, status: STATUS_CODES.FORBIDDEN, message: 'Company context is required.' })
+      }
+
+      const existing = await VendorBillModel.findByUuid(uuid, companyId)
       if (!existing) {
         return createResponse1({ res, status: STATUS_CODES.NOT_FOUND, message: res.__('VENDOR_BILL.NOT_FOUND') })
       }
@@ -259,7 +281,7 @@ class VendorBillController {
         if (!project_uuid) {
           projectId = null
         } else {
-          const project = await this.ensureProject(project_uuid)
+          const project = await this.ensureProject(project_uuid, companyId)
           projectId = project?.id ?? null
         }
       }
@@ -269,7 +291,7 @@ class VendorBillController {
         if (!purchase_order_uuid) {
           purchaseOrderId = null
         } else {
-          const purchaseOrder = await this.ensurePurchaseOrder(purchase_order_uuid)
+          const purchaseOrder = await this.ensurePurchaseOrder(purchase_order_uuid, companyId)
           purchaseOrderId = purchaseOrder?.id ?? null
         }
       }
@@ -279,7 +301,7 @@ class VendorBillController {
         if (!vendor_uuid) {
           vendorId = null
         } else {
-          const vendor = await this.ensureVendor(vendor_uuid)
+          const vendor = await this.ensureVendor(vendor_uuid, companyId)
           vendorId = vendor?.id ?? null
         }
       }
@@ -305,7 +327,7 @@ class VendorBillController {
         payload.total_amount = Number(total_amount)
       }
 
-      const updated = await VendorBillModel.updateByUuid(uuid, payload)
+      const updated = await VendorBillModel.updateByUuid(uuid, payload, companyId)
       if (!updated) {
         return createResponse1({ res, status: STATUS_CODES.INTERNAL_SERVER_ERROR, message: res.__('SERVER_ERROR_MESSAGE') })
       }
@@ -335,7 +357,12 @@ class VendorBillController {
   async remove(req: CustomRequest, res: CustomResponse) {
     try {
       const { uuid } = req.params
-      const deleted = await VendorBillModel.deleteByUuid(uuid)
+      const companyId = req.user?.company_id
+      if (!companyId) {
+        return createResponse1({ res, status: STATUS_CODES.FORBIDDEN, message: 'Company context is required.' })
+      }
+
+      const deleted = await VendorBillModel.deleteByUuid(uuid, companyId)
       if (!deleted) {
         return createResponse1({ res, status: STATUS_CODES.NOT_FOUND, message: res.__('VENDOR_BILL.NOT_FOUND') })
       }

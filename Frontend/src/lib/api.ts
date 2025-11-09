@@ -1,6 +1,8 @@
 import {
   AuthTokens,
   AuthUser,
+  Contact,
+  ContactType,
   ExpensesListResponse,
   Expense,
   InvoicesListResponse,
@@ -15,6 +17,7 @@ import {
   Task,
   TimesheetsListResponse,
   TimesheetEntry,
+  UserRole,
   VendorBillsListResponse,
   VendorBill,
   ContactsListResponse,
@@ -191,10 +194,10 @@ export const login = async (email: string, password: string): Promise<AuthTokens
   return response.data
 }
 
-export const signup = async (name: string, email: string, password: string): Promise<AuthTokens> => {
+export const signup = async (name: string, email: string, password: string, companyName: string): Promise<AuthTokens> => {
   const response = await request<AuthTokens>('/Auth/signup', {
     method: 'POST',
-    body: { name, email, password },
+    body: { name, email, password, company_name: companyName },
     skipAuth: true
   })
   return response.data
@@ -427,6 +430,47 @@ export const listContacts = async (params: ContactsListParams = {}): Promise<Con
   return response.data
 }
 
+export interface CreateContactPayload {
+  name: string
+  type: ContactType
+  email?: string | null
+  phone?: string | null
+  address?: string | null
+}
+
+export interface UpdateContactPayload {
+  name?: string
+  type?: ContactType
+  email?: string | null
+  phone?: string | null
+  address?: string | null
+}
+
+export const createContact = async (payload: CreateContactPayload): Promise<Contact> => {
+  const response = await request<Contact>('/Contacts', {
+    method: 'POST',
+    body: payload
+  })
+  return response.data
+}
+
+export const updateContact = async (uuid: string, payload: UpdateContactPayload): Promise<Contact> => {
+  const response = await request<Contact>(`/Contacts/${uuid}`, {
+    method: 'PUT',
+    body: payload
+  })
+  return response.data
+}
+
+export const deleteContact = async (uuid: string): Promise<void> => {
+  await request<Record<string, never>>(`/Contacts/${uuid}`, { method: 'DELETE' })
+}
+
+export const getContact = async (uuid: string): Promise<Contact> => {
+  const response = await request<Contact>(`/Contacts/${uuid}`)
+  return response.data
+}
+
 export interface UsersListParams {
   limit?: number
   page?: number
@@ -436,6 +480,42 @@ export interface UsersListParams {
 export const listUsers = async (params: UsersListParams = {}): Promise<UsersListResponse> => {
   const response = await request<UsersListResponse>('/Auth/users', { query: params })
   return response.data
+}
+
+export interface CreateUserPayload {
+  name: string
+  email: string
+  password: string
+  role: UserRole
+  hourly_rate?: number
+}
+
+export interface UpdateUserPayload {
+  name?: string
+  email?: string
+  password?: string
+  role?: UserRole
+  hourly_rate?: number
+}
+
+export const createUser = async (payload: CreateUserPayload): Promise<AuthUser> => {
+  const response = await request<AuthUser>('/Auth/users', {
+    method: 'POST',
+    body: payload
+  })
+  return response.data
+}
+
+export const updateUser = async (id: number, payload: UpdateUserPayload): Promise<AuthUser> => {
+  const response = await request<AuthUser>(`/Auth/users/${id}`, {
+    method: 'PUT',
+    body: payload
+  })
+  return response.data
+}
+
+export const deleteUser = async (id: number): Promise<void> => {
+  await request<Record<string, never>>(`/Auth/users/${id}`, { method: 'DELETE' })
 }
 
 export const getAnalyticsDashboard = async (): Promise<AnalyticsDashboardResponse> => {
@@ -481,6 +561,24 @@ export const createTask = async (payload: CreateTaskPayload): Promise<Task> => {
   return response.data
 }
 
+export interface UpdateTaskPayload {
+  title?: string
+  description?: string | null
+  status?: string
+  priority?: string
+  assignee_uuid?: string | null
+  due_date?: string | null
+  assigned_user_uuids?: string[]
+}
+
+export const updateTask = async (uuid: string, payload: UpdateTaskPayload): Promise<Task> => {
+  const response = await request<Task>(`/Tasks/${uuid}`, {
+    method: 'PUT',
+    body: payload
+  })
+  return response.data
+}
+
 export interface CreateTimesheetPayload {
   project_uuid: string
   task_uuid?: string | null
@@ -517,6 +615,22 @@ export const createSalesOrder = async (payload: CreateSalesOrderPayload): Promis
   return response.data
 }
 
+export interface UpdateSalesOrderPayload {
+  client_uuid?: string | null
+  status?: string
+  date?: string
+  total_amount?: number
+  items?: Record<string, any>[]
+}
+
+export const updateSalesOrder = async (uuid: string, payload: UpdateSalesOrderPayload): Promise<SalesOrder> => {
+  const response = await request<SalesOrder>(`/SalesOrders/${uuid}`, {
+    method: 'PUT',
+    body: payload
+  })
+  return response.data
+}
+
 export interface CreatePurchaseOrderPayload {
   project_uuid?: string | null
   vendor_uuid?: string | null
@@ -529,6 +643,22 @@ export interface CreatePurchaseOrderPayload {
 export const createPurchaseOrder = async (payload: CreatePurchaseOrderPayload): Promise<PurchaseOrder> => {
   const response = await request<PurchaseOrder>('/PurchaseOrders', {
     method: 'POST',
+    body: payload
+  })
+  return response.data
+}
+
+export interface UpdatePurchaseOrderPayload {
+  vendor_uuid?: string | null
+  status?: string
+  date?: string
+  total_amount?: number
+  items?: Record<string, any>[]
+}
+
+export const updatePurchaseOrder = async (uuid: string, payload: UpdatePurchaseOrderPayload): Promise<PurchaseOrder> => {
+  const response = await request<PurchaseOrder>(`/PurchaseOrders/${uuid}`, {
+    method: 'PUT',
     body: payload
   })
   return response.data
@@ -553,6 +683,24 @@ export const createInvoice = async (payload: CreateInvoicePayload): Promise<Invo
   return response.data
 }
 
+export interface UpdateInvoicePayload {
+  client_uuid?: string | null
+  sales_order_uuid?: string | null
+  status?: string
+  date?: string
+  due_date?: string | null
+  total_amount?: number
+  items?: Record<string, any>[]
+}
+
+export const updateInvoice = async (uuid: string, payload: UpdateInvoicePayload): Promise<Invoice> => {
+  const response = await request<Invoice>(`/Invoices/${uuid}`, {
+    method: 'PUT',
+    body: payload
+  })
+  return response.data
+}
+
 export interface CreateVendorBillPayload {
   project_uuid?: string | null
   purchase_order_uuid?: string | null
@@ -572,6 +720,24 @@ export const createVendorBill = async (payload: CreateVendorBillPayload): Promis
   return response.data
 }
 
+export interface UpdateVendorBillPayload {
+  vendor_uuid?: string | null
+  purchase_order_uuid?: string | null
+  status?: string
+  date?: string
+  due_date?: string | null
+  total_amount?: number
+  items?: Record<string, any>[]
+}
+
+export const updateVendorBill = async (uuid: string, payload: UpdateVendorBillPayload): Promise<VendorBill> => {
+  const response = await request<VendorBill>(`/VendorBills/${uuid}`, {
+    method: 'PUT',
+    body: payload
+  })
+  return response.data
+}
+
 export interface CreateExpensePayload {
   project_uuid: string
   user_uuid?: string | null
@@ -586,6 +752,24 @@ export interface CreateExpensePayload {
 export const createExpense = async (payload: CreateExpensePayload): Promise<Expense> => {
   const response = await request<Expense>('/Expenses', {
     method: 'POST',
+    body: payload
+  })
+  return response.data
+}
+
+export interface UpdateExpensePayload {
+  user_uuid?: string | null
+  description?: string
+  amount?: number
+  date?: string
+  status?: string
+  billable?: boolean
+  receipt_url?: string | null
+}
+
+export const updateExpense = async (uuid: string, payload: UpdateExpensePayload): Promise<Expense> => {
+  const response = await request<Expense>(`/Expenses/${uuid}`, {
+    method: 'PUT',
     body: payload
   })
   return response.data

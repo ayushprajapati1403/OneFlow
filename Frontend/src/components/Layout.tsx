@@ -12,6 +12,8 @@ import {
   Menu,
   X,
   DollarSign,
+  BookUser,
+  Users,
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useNavigate } from '../hooks/useNavigate';
@@ -39,8 +41,16 @@ export function Layout({ children, currentPage }: LayoutProps) {
     { id: 'tasks', label: 'Tasks', icon: CheckSquare },
     { id: 'timesheets', label: 'Timesheets', icon: Clock },
     { id: 'analytics', label: 'Analytics', icon: BarChart3 },
-    { id: 'settings', label: 'Finance', icon: DollarSign },
+    { id: 'contacts', label: 'Contacts', icon: BookUser },
+    { id: 'team', label: 'Team', icon: Users, roles: ['admin', 'project_manager'] as const },
+    { id: 'settings', label: 'Finance', icon: DollarSign, roles: ['admin', 'project_manager', 'finance'] as const },
   ];
+
+  const allowedNavItems = navItems.filter((item) => {
+    if (!item.roles) return true;
+    if (!user) return false;
+    return item.roles.includes(user.role);
+  });
 
   const handleSignOut = async () => {
     await signOut();
@@ -126,7 +136,7 @@ export function Layout({ children, currentPage }: LayoutProps) {
                 </div>
 
                 <nav className="flex-1 p-4 space-y-1">
-                  {navItems.map((item) => {
+                  {allowedNavItems.map((item) => {
                     const Icon = item.icon;
                     const isActive = currentPage === item.id;
 

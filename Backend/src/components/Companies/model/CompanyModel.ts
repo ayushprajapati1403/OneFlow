@@ -11,4 +11,3 @@ class CompanyModel {
 }
 
 export default new CompanyModel()
-

@@ -79,18 +79,18 @@ class SalesOrderController {
     return ALLOWED_STATUS.includes(normalized) ? normalized : SALES_ORDER_STATUS.DRAFT
   }
 
-  private async ensureProject(uuid?: string | null) {
+  private async ensureProject(uuid: string | null | undefined, companyId: number) {
     if (!uuid) return null
-    const project = await ProjectModel.findByUuid(uuid)
+    const project = await ProjectModel.findByUuid(uuid, companyId)
     if (!project) {
       throw new Error('INVALID_PROJECT')
     }
     return project
   }
 
-  private async ensureClient(uuid?: string | null) {
+  private async ensureClient(uuid: string | null | undefined, companyId: number) {
     if (!uuid) return null
-    const contact = await ContactModel.findByUuid(uuid)
+    const contact = await ContactModel.findByUuid(uuid, companyId)
     if (!contact) {
       throw new Error('INVALID_CLIENT')
     }
@@ -112,6 +112,11 @@ class SalesOrderController {
 
   async list(req: CustomRequest, res: CustomResponse) {
     try {
+      const companyId = req.user?.company_id
+      if (!companyId) {
+        return createResponse1({ res, status: STATUS_CODES.FORBIDDEN, message: 'Company context is required.' })
+      }
+
       const page = Math.max(Number(req.query.page ?? 1), 1)
       const limit = Math.max(Number(req.query.limit ?? SALES_ORDER_DEFAULT_LIMIT), 1)
       const offset = (page - 1) * limit
@@ -124,13 +129,13 @@ class SalesOrderController {
 
       let projectId: number | undefined
       if (req.query.project_uuid) {
-        const project = await this.ensureProject(String(req.query.project_uuid))
+        const project = await this.ensureProject(String(req.query.project_uuid), companyId)
         projectId = project?.id
       }
 
       let clientId: number | undefined
       if (req.query.client_uuid) {
-        const client = await this.ensureClient(String(req.query.client_uuid))
+        const client = await this.ensureClient(String(req.query.client_uuid), companyId)
         clientId = client?.id
       }
 
@@ -142,7 +147,8 @@ class SalesOrderController {
         dateTo: req.query.date_to as string,
         search: req.query.search as string,
         limit,
-        offset
+        offset,
+        companyId
       })
 
       return createResponse(res, STATUS_CODES.OK, res.__('SALES_ORDER.LIST_SUCCESS'), {
@@ -175,10 +181,15 @@ class SalesOrderController {
 
   async create(req: CustomRequest, res: CustomResponse) {
     try {
+      const companyId = req.user?.company_id
+      if (!companyId) {
+        return createResponse1({ res, status: STATUS_CODES.FORBIDDEN, message: 'Company context is required.' })
+      }
+
       const { project_uuid, client_uuid, date, status, items, total_amount } = req.body
 
-      const project = await this.ensureProject(project_uuid)
-      const client = await this.ensureClient(client_uuid)
+      const project = await this.ensureProject(project_uuid, companyId)
+      const client = await this.ensureClient(client_uuid, companyId)
 
       const normalizedStatus = this.normalizeStatus(status)
       const normalizedItems = this.normalizeItems(items)
@@ -190,10 +201,11 @@ class SalesOrderController {
         date,
         status: normalizedStatus,
         items: normalizedItems,
-        total_amount: numericTotal
+        total_amount: numericTotal,
+        company_id: companyId
       })
 
-      const hydrated = await SalesOrderModel.findByUuid(salesOrder.uuid)
+      const hydrated = await SalesOrderModel.findByUuid(salesOrder.uuid, companyId)
       if (!hydrated) {
         throw new Error('CREATION_FAILED')
       }
@@ -222,7 +234,12 @@ class SalesOrderController {
   async get(req: CustomRequest, res: CustomResponse) {
     try {
       const { uuid } = req.params
-      const order = await SalesOrderModel.findByUuid(uuid)
+      const companyId = req.user?.company_id
+      if (!companyId) {
+        return createResponse1({ res, status: STATUS_CODES.FORBIDDEN, message: 'Company context is required.' })
+      }
+
+      const order = await SalesOrderModel.findByUuid(uuid, companyId)
       if (!order) {
         return createResponse1({ res, status: STATUS_CODES.NOT_FOUND, message: res.__('SALES_ORDER.NOT_FOUND') })
       }
@@ -243,7 +260,12 @@ class SalesOrderController {
       const { uuid } = req.params
       const { project_uuid, client_uuid, date, status, items, total_amount } = req.body
 
-      const existing = await SalesOrderModel.findByUuid(uuid)
+      const companyId = req.user?.company_id
+      if (!companyId) {
+        return createResponse1({ res, status: STATUS_CODES.FORBIDDEN, message: 'Company context is required.' })
+      }
+
+      const existing = await SalesOrderModel.findByUuid(uuid, companyId)
       if (!existing) {
         return createResponse1({ res, status: STATUS_CODES.NOT_FOUND, message: res.__('SALES_ORDER.NOT_FOUND') })
       }
@@ -253,7 +275,7 @@ class SalesOrderController {
         if (!project_uuid) {
           projectId = null
         } else {
-          const project = await this.ensureProject(project_uuid)
+          const project = await this.ensureProject(project_uuid, companyId)
           projectId = project?.id ?? null
         }
       }
@@ -263,7 +285,7 @@ class SalesOrderController {
         if (!client_uuid) {
           clientId = null
         } else {
-          const client = await this.ensureClient(client_uuid)
+          const client = await this.ensureClient(client_uuid, companyId)
           clientId = client?.id ?? null
         }
       }
@@ -287,7 +309,7 @@ class SalesOrderController {
         payload.total_amount = Number(total_amount)
       }
 
-      const updated = await SalesOrderModel.updateByUuid(uuid, payload)
+      const updated = await SalesOrderModel.updateByUuid(uuid, payload, companyId)
       if (!updated) {
         return createResponse1({ res, status: STATUS_CODES.INTERNAL_SERVER_ERROR, message: res.__('SERVER_ERROR_MESSAGE') })
       }
@@ -315,7 +337,12 @@ class SalesOrderController {
   async remove(req: CustomRequest, res: CustomResponse) {
     try {
       const { uuid } = req.params
-      const deleted = await SalesOrderModel.deleteByUuid(uuid)
+      const companyId = req.user?.company_id
+      if (!companyId) {
+        return createResponse1({ res, status: STATUS_CODES.FORBIDDEN, message: 'Company context is required.' })
+      }
+
+      const deleted = await SalesOrderModel.deleteByUuid(uuid, companyId)
       if (!deleted) {
         return createResponse1({ res, status: STATUS_CODES.NOT_FOUND, message: res.__('SALES_ORDER.NOT_FOUND') })
       }

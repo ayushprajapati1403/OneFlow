@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { Mail, Lock, User, ArrowLeft, BarChart3 } from 'lucide-react';
+import { Mail, Lock, User, ArrowLeft, BarChart3, Building2 } from 'lucide-react';
 import { ProceduralBackground } from '../components/ProceduralBackground';
 import { Input } from '../components/ui/Input';
 import { Button } from '../components/ui/Button';
@@ -12,6 +12,7 @@ export function SignUp() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [fullName, setFullName] = useState('');
+  const [companyName, setCompanyName] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const { signUp } = useAuth();
@@ -23,7 +24,7 @@ export function SignUp() {
     setError('');
     setLoading(true);
 
-    const { error } = await signUp(email, password, fullName);
+    const { error } = await signUp(email, password, fullName, companyName);
 
     if (error) {
       const message = error.message || 'Unable to create account with the provided details.';
@@ -82,6 +83,16 @@ export function SignUp() {
                 value={fullName}
                 onChange={(e) => setFullName(e.target.value)}
                 icon={<User className="w-4 h-4" />}
+                required
+              />
+
+              <Input
+                type="text"
+                label="Company Name"
+                placeholder="Acme Corporation"
+                value={companyName}
+                onChange={(e) => setCompanyName(e.target.value)}
+                icon={<Building2 className="w-4 h-4" />}
                 required
               />
 

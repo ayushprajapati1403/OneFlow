@@ -10,6 +10,8 @@ import { Tasks } from './pages/Tasks';
 import { Timesheets } from './pages/Timesheets';
 import { Analytics } from './pages/Analytics';
 import { Settings } from './pages/Settings';
+import { Contacts } from './pages/Contacts';
+import { Team } from './pages/Team';
 import { Layout } from './components/Layout';
 import { Page } from './hooks/useNavigate';
 import { ProjectDetail } from './pages/ProjectDetail';
@@ -78,6 +80,10 @@ function AppRouter() {
         return <Analytics />;
       case 'settings':
         return <Settings />;
+      case 'contacts':
+        return <Contacts />;
+      case 'team':
+        return <Team />;
       default:
         return <Dashboard />;
     }

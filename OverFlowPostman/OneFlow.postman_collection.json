@@ -289,6 +289,80 @@
       ]
     },
     {
+      "name": "Company Admin",
+      "description": "Tenant-scoped administration endpoints for managing contacts and users.",
+      "item": [
+        {
+          "name": "List Company Contacts",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/Contacts?limit=25",
+              "host": [ "{{base_url}}" ],
+              "path": [ "Contacts" ],
+              "query": [
+                { "key": "limit", "value": "25" }
+              ]
+            },
+            "description": "Retrieve the current company's contacts (clients, vendors)."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () { pm.response.to.have.status(200); });",
+                  "const json = pm.response.json();",
+                  "pm.test(\"Contacts list returned\", function () {",
+                  "  pm.expect(json.data).to.have.property('contacts');",
+                  "  pm.expect(json.data.contacts).to.be.an('array');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "List Company Users",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/Auth/users?limit=25",
+              "host": [ "{{base_url}}" ],
+              "path": [ "Auth", "users" ],
+              "query": [
+                { "key": "limit", "value": "25" }
+              ]
+            },
+            "description": "Retrieve all users belonging to the authenticated company."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () { pm.response.to.have.status(200); });",
+                  "const json = pm.response.json();",
+                  "pm.test(\"Users list returned\", function () {",
+                  "  pm.expect(json.data).to.have.property('users');",
+                  "  pm.expect(json.data.users).to.be.an('array');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
       "name": "Projects",
       "item": [
         {

@@ -14,6 +14,7 @@ export interface ExpenseListOptions {
   limit?: number
   offset?: number
   attributes?: FindOptions['attributes']
+  companyId?: number
 }
 
 type ExpenseCreationPayload = {
@@ -25,6 +26,7 @@ type ExpenseCreationPayload = {
   billable?: boolean
   status?: ExpenseStatus
   receipt_url?: string | null
+  company_id: number
 }
 
 type ExpenseUpdatePayload = Partial<ExpenseCreationPayload>
@@ -34,9 +36,12 @@ class ExpenseModel {
     return ExpenseSchema.create(payload as any)
   }
 
-  async findByUuid(uuid: string): Promise<ExpenseSchema | null> {
+  async findByUuid(uuid: string, companyId?: number): Promise<ExpenseSchema | null> {
     return ExpenseSchema.findOne({
-      where: { uuid },
+      where: {
+        uuid,
+        ...(companyId ? { company_id: companyId } : {})
+      },
       include: [
         { model: ProjectSchema, as: 'project', attributes: ['uuid', 'name'] },
         { model: AuthSchema, as: 'user', attributes: ['uuid', 'name', 'email'] }
@@ -46,6 +51,10 @@ class ExpenseModel {
 
   async listExpenses(options: ExpenseListOptions = {}) {
     const where: WhereOptions = {}
+
+    if (options.companyId) {
+      Object.assign(where, { company_id: options.companyId })
+    }
 
     if (options.projectId) {
       Object.assign(where, { project_id: options.projectId })
@@ -96,20 +105,28 @@ class ExpenseModel {
     })
   }
 
-  async updateByUuid(uuid: string, payload: ExpenseUpdatePayload): Promise<ExpenseSchema | null> {
+  async updateByUuid(uuid: string, payload: ExpenseUpdatePayload, companyId?: number): Promise<ExpenseSchema | null> {
     const [updatedCount] = await ExpenseSchema.update(payload as any, {
-      where: { uuid }
+      where: {
+        uuid,
+        ...(companyId ? { company_id: companyId } : {})
+      }
     })
 
     if (!updatedCount) {
       return null
     }
 
-    return this.findByUuid(uuid)
+    return this.findByUuid(uuid, companyId)
   }
 
-  async deleteByUuid(uuid: string): Promise<number> {
-    return ExpenseSchema.destroy({ where: { uuid } })
+  async deleteByUuid(uuid: string, companyId?: number): Promise<number> {
+    return ExpenseSchema.destroy({
+      where: {
+        uuid,
+        ...(companyId ? { company_id: companyId } : {})
+      }
+    })
   }
 }
 

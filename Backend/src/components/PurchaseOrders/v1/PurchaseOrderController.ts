@@ -79,18 +79,18 @@ class PurchaseOrderController {
     return ALLOWED_STATUS.includes(normalized) ? normalized : PURCHASE_ORDER_STATUS.DRAFT
   }
 
-  private async ensureProject(uuid?: string | null) {
+  private async ensureProject(uuid: string | null | undefined, companyId: number) {
     if (!uuid) return null
-    const project = await ProjectModel.findByUuid(uuid)
+    const project = await ProjectModel.findByUuid(uuid, companyId)
     if (!project) {
       throw new Error('INVALID_PROJECT')
     }
     return project
   }
 
-  private async ensureVendor(uuid?: string | null) {
+  private async ensureVendor(uuid: string | null | undefined, companyId: number) {
     if (!uuid) return null
-    const contact = await ContactModel.findByUuid(uuid)
+    const contact = await ContactModel.findByUuid(uuid, companyId)
     if (!contact) {
       throw new Error('INVALID_VENDOR')
     }
@@ -112,6 +112,11 @@ class PurchaseOrderController {
 
   async list(req: CustomRequest, res: CustomResponse) {
     try {
+      const companyId = req.user?.company_id
+      if (!companyId) {
+        return createResponse1({ res, status: STATUS_CODES.FORBIDDEN, message: 'Company context is required.' })
+      }
+
       const page = Math.max(Number(req.query.page ?? 1), 1)
       const limit = Math.max(Number(req.query.limit ?? PURCHASE_ORDER_DEFAULT_LIMIT), 1)
       const offset = (page - 1) * limit
@@ -124,13 +129,13 @@ class PurchaseOrderController {
 
       let projectId: number | undefined
       if (req.query.project_uuid) {
-        const project = await this.ensureProject(String(req.query.project_uuid))
+        const project = await this.ensureProject(String(req.query.project_uuid), companyId)
         projectId = project?.id
       }
 
       let vendorId: number | undefined
       if (req.query.vendor_uuid) {
-        const vendor = await this.ensureVendor(String(req.query.vendor_uuid))
+        const vendor = await this.ensureVendor(String(req.query.vendor_uuid), companyId)
         vendorId = vendor?.id
       }
 
@@ -142,7 +147,8 @@ class PurchaseOrderController {
         dateTo: req.query.date_to as string,
         search: req.query.search as string,
         limit,
-        offset
+        offset,
+        companyId
       })
 
       return createResponse(res, STATUS_CODES.OK, res.__('PURCHASE_ORDER.LIST_SUCCESS'), {
@@ -174,10 +180,15 @@ class PurchaseOrderController {
 
   async create(req: CustomRequest, res: CustomResponse) {
     try {
+      const companyId = req.user?.company_id
+      if (!companyId) {
+        return createResponse1({ res, status: STATUS_CODES.FORBIDDEN, message: 'Company context is required.' })
+      }
+
       const { project_uuid, vendor_uuid, date, status, items, total_amount } = req.body
 
-      const project = await this.ensureProject(project_uuid)
-      const vendor = await this.ensureVendor(vendor_uuid)
+      const project = await this.ensureProject(project_uuid, companyId)
+      const vendor = await this.ensureVendor(vendor_uuid, companyId)
 
       const normalizedStatus = this.normalizeStatus(status)
       const normalizedItems = this.normalizeItems(items)
@@ -189,10 +200,11 @@ class PurchaseOrderController {
         date,
         status: normalizedStatus,
         items: normalizedItems,
-        total_amount: numericTotal
+        total_amount: numericTotal,
+        company_id: companyId
       })
 
-      const hydrated = await PurchaseOrderModel.findByUuid(purchaseOrder.uuid)
+      const hydrated = await PurchaseOrderModel.findByUuid(purchaseOrder.uuid, companyId)
       if (!hydrated) {
         throw new Error('CREATION_FAILED')
       }
@@ -220,7 +232,12 @@ class PurchaseOrderController {
   async get(req: CustomRequest, res: CustomResponse) {
     try {
       const { uuid } = req.params
-      const order = await PurchaseOrderModel.findByUuid(uuid)
+      const companyId = req.user?.company_id
+      if (!companyId) {
+        return createResponse1({ res, status: STATUS_CODES.FORBIDDEN, message: 'Company context is required.' })
+      }
+
+      const order = await PurchaseOrderModel.findByUuid(uuid, companyId)
       if (!order) {
         return createResponse1({ res, status: STATUS_CODES.NOT_FOUND, message: res.__('PURCHASE_ORDER.NOT_FOUND') })
       }
@@ -241,7 +258,12 @@ class PurchaseOrderController {
       const { uuid } = req.params
       const { project_uuid, vendor_uuid, date, status, items, total_amount } = req.body
 
-      const existing = await PurchaseOrderModel.findByUuid(uuid)
+      const companyId = req.user?.company_id
+      if (!companyId) {
+        return createResponse1({ res, status: STATUS_CODES.FORBIDDEN, message: 'Company context is required.' })
+      }
+
+      const existing = await PurchaseOrderModel.findByUuid(uuid, companyId)
       if (!existing) {
         return createResponse1({ res, status: STATUS_CODES.NOT_FOUND, message: res.__('PURCHASE_ORDER.NOT_FOUND') })
       }
@@ -251,7 +273,7 @@ class PurchaseOrderController {
         if (!project_uuid) {
           projectId = null
         } else {
-          const project = await this.ensureProject(project_uuid)
+          const project = await this.ensureProject(project_uuid, companyId)
           projectId = project?.id ?? null
         }
       }
@@ -261,7 +283,7 @@ class PurchaseOrderController {
         if (!vendor_uuid) {
           vendorId = null
         } else {
-          const vendor = await this.ensureVendor(vendor_uuid)
+          const vendor = await this.ensureVendor(vendor_uuid, companyId)
           vendorId = vendor?.id ?? null
         }
       }
@@ -285,7 +307,7 @@ class PurchaseOrderController {
         payload.total_amount = Number(total_amount)
       }
 
-      const updated = await PurchaseOrderModel.updateByUuid(uuid, payload)
+      const updated = await PurchaseOrderModel.updateByUuid(uuid, payload, companyId)
       if (!updated) {
         return createResponse1({ res, status: STATUS_CODES.INTERNAL_SERVER_ERROR, message: res.__('SERVER_ERROR_MESSAGE') })
       }
@@ -313,7 +335,12 @@ class PurchaseOrderController {
   async remove(req: CustomRequest, res: CustomResponse) {
     try {
       const { uuid } = req.params
-      const deleted = await PurchaseOrderModel.deleteByUuid(uuid)
+      const companyId = req.user?.company_id
+      if (!companyId) {
+        return createResponse1({ res, status: STATUS_CODES.FORBIDDEN, message: 'Company context is required.' })
+      }
+
+      const deleted = await PurchaseOrderModel.deleteByUuid(uuid, companyId)
       if (!deleted) {
         return createResponse1({ res, status: STATUS_CODES.NOT_FOUND, message: res.__('PURCHASE_ORDER.NOT_FOUND') })
       }
