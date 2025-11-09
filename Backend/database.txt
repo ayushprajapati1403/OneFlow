@@ -1,29 +1,42 @@
--- ==============================
--- 1. CORE & USERS
--- ==============================
+-- ===========================================================
+-- ONEFLOW DATABASE BLUEPRINT (REVISION 2)
+-- Ensures UUID coverage and multi-user task assignments
+-- ===========================================================
+
+-- Enable crypto-safe UUID generation
+CREATE EXTENSION IF NOT EXISTS "pgcrypto";
+
+-- -----------------------------------------------------------
+-- 1. ENUMERATIONS
+-- -----------------------------------------------------------
 
 CREATE TYPE user_role AS ENUM ('admin', 'project_manager', 'team_member', 'finance');
+CREATE TYPE contact_type AS ENUM ('client', 'vendor', 'both');
+CREATE TYPE project_status AS ENUM ('planned', 'active', 'on_hold', 'completed');
+CREATE TYPE task_status AS ENUM ('todo', 'in_progress', 'review', 'done');
+CREATE TYPE task_priority AS ENUM ('low', 'medium', 'high');
+CREATE TYPE doc_status AS ENUM ('draft', 'sent', 'approved', 'paid', 'declined');
+
+-- -----------------------------------------------------------
+-- 2. CORE TABLES
+-- -----------------------------------------------------------
 
 CREATE TABLE users (
     id SERIAL PRIMARY KEY,
+    uuid UUID NOT NULL DEFAULT gen_random_uuid() UNIQUE,
     name VARCHAR(255) NOT NULL,
     email VARCHAR(255) UNIQUE NOT NULL,
     password_hash TEXT NOT NULL,
     role user_role DEFAULT 'team_member',
-    hourly_rate DECIMAL(10,2) DEFAULT 0.00, -- Internal cost rate for profitability calc
+    hourly_rate DECIMAL(10,2) DEFAULT 0.00,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
--- ==============================
--- 2. CONTACTS (Clients & Vendors)
--- ==============================
-
-CREATE TYPE contact_type AS ENUM ('client', 'vendor', 'both');
-
 CREATE TABLE contacts (
     id SERIAL PRIMARY KEY,
-    name VARCHAR(255) NOT NULL, -- Company or Person name
+    uuid UUID NOT NULL DEFAULT gen_random_uuid() UNIQUE,
+    name VARCHAR(255) NOT NULL,
     type contact_type NOT NULL,
     email VARCHAR(255),
     phone VARCHAR(50),
@@ -32,98 +45,106 @@ CREATE TABLE contacts (
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
--- ==============================
--- 3. PROJECTS CORE
--- ==============================
-
-CREATE TYPE project_status AS ENUM ('planned', 'active', 'on_hold', 'completed');
-
 CREATE TABLE projects (
     id SERIAL PRIMARY KEY,
+    uuid UUID NOT NULL DEFAULT gen_random_uuid() UNIQUE,
     name VARCHAR(255) NOT NULL,
     description TEXT,
-    client_id INTEGER REFERENCES contacts(id), -- Link to who is paying
-    manager_id INTEGER REFERENCES users(id),  -- Link to PM
+    client_id INTEGER REFERENCES contacts(id),
+    manager_id INTEGER REFERENCES users(id),
     status project_status DEFAULT 'planned',
     start_date DATE,
     end_date DATE,
-    budget DECIMAL(15,2) DEFAULT 0.00, -- Overall budget target
+    budget DECIMAL(15,2) DEFAULT 0.00,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
--- ==============================
--- 4. TASKS & TIME
--- ==============================
+-- -----------------------------------------------------------
+-- 3. COLLABORATION
+-- -----------------------------------------------------------
 
-CREATE TYPE task_status AS ENUM ('todo', 'in_progress', 'review', 'done');
-CREATE TYPE task_priority AS ENUM ('low', 'medium', 'high');
+CREATE TABLE project_members (
+    id SERIAL PRIMARY KEY,
+    uuid UUID NOT NULL DEFAULT gen_random_uuid() UNIQUE,
+    project_id INTEGER NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+    user_id INTEGER NOT NULL REFERENCES users(id),
+    role user_role DEFAULT 'team_member',
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE (project_id, user_id)
+);
 
 CREATE TABLE tasks (
     id SERIAL PRIMARY KEY,
-    project_id INTEGER REFERENCES projects(id) ON DELETE CASCADE, -- If project deleted, tasks go too
+    uuid UUID NOT NULL DEFAULT gen_random_uuid() UNIQUE,
+    project_id INTEGER REFERENCES projects(id) ON DELETE CASCADE,
     title VARCHAR(255) NOT NULL,
     description TEXT,
     status task_status DEFAULT 'todo',
     priority task_priority DEFAULT 'medium',
-    assignee_id INTEGER REFERENCES users(id),
     due_date TIMESTAMP WITH TIME ZONE,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
+CREATE TABLE task_assignments (
+    id SERIAL PRIMARY KEY,
+    uuid UUID NOT NULL DEFAULT gen_random_uuid() UNIQUE,
+    task_id INTEGER NOT NULL REFERENCES tasks(id) ON DELETE CASCADE,
+    user_id INTEGER NOT NULL REFERENCES users(id),
+    assigned_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE (task_id, user_id)
+);
+
 CREATE TABLE timesheets (
     id SERIAL PRIMARY KEY,
-    project_id INTEGER REFERENCES projects(id) ON DELETE CASCADE, -- Link directly for easy cost calc
+    uuid UUID NOT NULL DEFAULT gen_random_uuid() UNIQUE,
+    project_id INTEGER NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
     task_id INTEGER REFERENCES tasks(id),
-    user_id INTEGER REFERENCES users(id),
+    user_id INTEGER NOT NULL REFERENCES users(id),
     date DATE NOT NULL DEFAULT CURRENT_DATE,
-    hours DECIMAL(5,2) NOT NULL,
+    hours DECIMAL(5,2) NOT NULL CHECK (hours > 0),
     description TEXT,
     billable BOOLEAN DEFAULT TRUE,
-    cost_rate DECIMAL(10,2) NOT NULL, -- Snapshot of user's rate at time of logging
+    cost_rate DECIMAL(10,2) NOT NULL,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
--- ==============================
--- 5. FINANCE (Money In & Out)
--- ==============================
--- Note: Using JSONB for 'items' to save creating 5 extra tables in a hackathon.
--- Items JSON structure example: [{"desc": "Design", "qty": 1, "price": 500}, {...}]
+-- -----------------------------------------------------------
+-- 4. FINANCIAL DOCUMENTS
+-- -----------------------------------------------------------
 
-CREATE TYPE doc_status AS ENUM ('draft', 'sent', 'approved', 'paid', 'declined');
-
--- MONEY IN (Revenue Planned)
 CREATE TABLE sales_orders (
     id SERIAL PRIMARY KEY,
+    uuid UUID NOT NULL DEFAULT gen_random_uuid() UNIQUE,
     project_id INTEGER REFERENCES projects(id) ON DELETE CASCADE,
     client_id INTEGER REFERENCES contacts(id),
     date DATE DEFAULT CURRENT_DATE,
     status doc_status DEFAULT 'draft',
-    items JSONB DEFAULT '[]', -- The line items
-    total_amount DECIMAL(15,2) DEFAULT 0.00,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
-);
-
--- MONEY IN (Revenue Actual)
-CREATE TABLE invoices (
-    id SERIAL PRIMARY KEY,
-    project_id INTEGER REFERENCES projects(id),
-    sales_order_id INTEGER REFERENCES sales_orders(id), -- Optional link back to SO
-    client_id INTEGER REFERENCES contacts(id),
-    date DATE DEFAULT CURRENT_DATE,
-    due_date DATE,
-    status doc_status DEFAULT 'draft', -- draft -> sent -> paid
     items JSONB DEFAULT '[]',
     total_amount DECIMAL(15,2) DEFAULT 0.00,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
--- MONEY OUT (Cost Planned)
+CREATE TABLE invoices (
+    id SERIAL PRIMARY KEY,
+    uuid UUID NOT NULL DEFAULT gen_random_uuid() UNIQUE,
+    project_id INTEGER REFERENCES projects(id),
+    sales_order_id INTEGER REFERENCES sales_orders(id),
+    client_id INTEGER REFERENCES contacts(id),
+    date DATE DEFAULT CURRENT_DATE,
+    due_date DATE,
+    status doc_status DEFAULT 'draft',
+    items JSONB DEFAULT '[]',
+    total_amount DECIMAL(15,2) DEFAULT 0.00,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
 CREATE TABLE purchase_orders (
     id SERIAL PRIMARY KEY,
+    uuid UUID NOT NULL DEFAULT gen_random_uuid() UNIQUE,
     project_id INTEGER REFERENCES projects(id),
     vendor_id INTEGER REFERENCES contacts(id),
     date DATE DEFAULT CURRENT_DATE,
@@ -134,32 +155,65 @@ CREATE TABLE purchase_orders (
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
--- MONEY OUT (Cost Actual - Vendors)
 CREATE TABLE vendor_bills (
     id SERIAL PRIMARY KEY,
+    uuid UUID NOT NULL DEFAULT gen_random_uuid() UNIQUE,
     project_id INTEGER REFERENCES projects(id),
-    purchase_order_id INTEGER REFERENCES purchase_orders(id), -- Optional link
+    purchase_order_id INTEGER REFERENCES purchase_orders(id),
     vendor_id INTEGER REFERENCES contacts(id),
     date DATE DEFAULT CURRENT_DATE,
     due_date DATE,
-    status doc_status DEFAULT 'draft', -- draft -> approved -> paid
+    status doc_status DEFAULT 'draft',
     items JSONB DEFAULT '[]',
     total_amount DECIMAL(15,2) DEFAULT 0.00,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
--- MONEY OUT (Cost Actual - Team)
 CREATE TABLE expenses (
     id SERIAL PRIMARY KEY,
+    uuid UUID NOT NULL DEFAULT gen_random_uuid() UNIQUE,
     project_id INTEGER REFERENCES projects(id),
-    user_id INTEGER REFERENCES users(id), -- Employee who paid
+    user_id INTEGER REFERENCES users(id),
     description TEXT NOT NULL,
     amount DECIMAL(10,2) NOT NULL,
     date DATE DEFAULT CURRENT_DATE,
-    billable BOOLEAN DEFAULT FALSE, -- Can we charge this back to the client?
-    status doc_status DEFAULT 'draft', -- draft -> approved -> paid (reimbursed)
-    receipt_url TEXT, -- For image upload if you have time
+    billable BOOLEAN DEFAULT FALSE,
+    status doc_status DEFAULT 'draft',
+    receipt_url TEXT,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
+
+-- -----------------------------------------------------------
+-- 5. PROFITABILITY SNAPSHOTS
+-- -----------------------------------------------------------
+
+CREATE TABLE project_financial_stats (
+    id SERIAL PRIMARY KEY,
+    uuid UUID NOT NULL DEFAULT gen_random_uuid() UNIQUE,
+    project_id INTEGER NOT NULL UNIQUE REFERENCES projects(id) ON DELETE CASCADE,
+    total_revenue DECIMAL(15,2) DEFAULT 0.00,
+    labor_cost DECIMAL(15,2) DEFAULT 0.00,
+    vendor_cost DECIMAL(15,2) DEFAULT 0.00,
+    profit DECIMAL(15,2) GENERATED ALWAYS AS (total_revenue - (labor_cost + vendor_cost)) STORED,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+-- -----------------------------------------------------------
+-- 6. INDEXING
+-- -----------------------------------------------------------
+
+CREATE INDEX idx_project_members_project ON project_members(project_id);
+CREATE INDEX idx_project_members_user ON project_members(user_id);
+CREATE INDEX idx_tasks_project ON tasks(project_id);
+CREATE INDEX idx_task_assignments_user ON task_assignments(user_id);
+CREATE INDEX idx_timesheets_project ON timesheets(project_id);
+CREATE INDEX idx_timesheets_task ON timesheets(task_id);
+CREATE INDEX idx_timesheets_user ON timesheets(user_id);
+CREATE INDEX idx_sales_orders_project ON sales_orders(project_id);
+CREATE INDEX idx_invoices_project ON invoices(project_id);
+CREATE INDEX idx_purchase_orders_project ON purchase_orders(project_id);
+CREATE INDEX idx_vendor_bills_project ON vendor_bills(project_id);
+CREATE INDEX idx_expenses_project ON expenses(project_id);
+

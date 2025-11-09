@@ -1,0 +1,180 @@
+{
+  "info": {
+    "_postman_id": "0ab5ce4c-2a6a-4fe5-97cf-8971d5f9152d",
+    "name": "OneFlow Contacts API",
+    "description": "Postman collection covering OneFlow Contacts endpoints.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Contacts",
+      "item": [
+        {
+          "name": "List Contacts",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{contacts_base_url}}?page=1&limit=20&search=&type=",
+              "host": [
+                "{{contacts_base_url}}"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "20"
+                },
+                {
+                  "key": "search",
+                  "value": ""
+                },
+                {
+                  "key": "type",
+                  "value": ""
+                }
+              ]
+            },
+            "description": "Returns a paginated list of contacts with optional search and type filtering."
+          },
+          "response": []
+        },
+        {
+          "name": "Create Contact",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{management_token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Acme Corp\",\n  \"type\": \"client\",\n  \"email\": \"billing@acme.example\",\n  \"phone\": \"+1 555 0100\",\n  \"address\": \"123 Market Street, Springfield\"\n}"
+            },
+            "url": {
+              "raw": "{{contacts_base_url}}",
+              "host": [
+                "{{contacts_base_url}}"
+              ]
+            },
+            "description": "Creates a new contact. Requires admin, project manager, or finance role."
+          },
+          "response": []
+        },
+        {
+          "name": "Get Contact",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{contacts_base_url}}/{{contact_uuid}}",
+              "host": [
+                "{{contacts_base_url}}"
+              ],
+              "path": [
+                "{{contact_uuid}}"
+              ]
+            },
+            "description": "Retrieves a single contact by UUID."
+          },
+          "response": []
+        },
+        {
+          "name": "Update Contact",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{management_token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Acme Corp HQ\",\n  \"phone\": \"+1 555 0199\",\n  \"address\": \"500 Broad Street, Springfield\"\n}"
+            },
+            "url": {
+              "raw": "{{contacts_base_url}}/{{contact_uuid}}",
+              "host": [
+                "{{contacts_base_url}}"
+              ],
+              "path": [
+                "{{contact_uuid}}"
+              ]
+            },
+            "description": "Updates an existing contact by UUID. Requires admin, project manager, or finance role."
+          },
+          "response": []
+        },
+        {
+          "name": "Delete Contact",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{management_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{contacts_base_url}}/{{contact_uuid}}",
+              "host": [
+                "{{contacts_base_url}}"
+              ],
+              "path": [
+                "{{contact_uuid}}"
+              ]
+            },
+            "description": "Deletes an existing contact by UUID. Requires admin, project manager, or finance role."
+          },
+          "response": []
+        }
+      ]
+    }
+  ],
+  "variable": [
+    {
+      "key": "contacts_base_url",
+      "value": "http://localhost:8007/oneflow/api/v1/Contacts"
+    },
+    {
+      "key": "access_token",
+      "value": "",
+      "description": "Access token for any authenticated user."
+    },
+    {
+      "key": "management_token",
+      "value": "",
+      "description": "Access token for a user with admin/project_manager/finance role."
+    },
+    {
+      "key": "contact_uuid",
+      "value": "00000000-0000-0000-0000-000000000000",
+      "description": "Placeholder contact UUID for detail, update, and delete requests."
+    }
+  ]
+}
+

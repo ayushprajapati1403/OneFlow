@@ -6,6 +6,7 @@ import authModel from '../model/AuthModel'
 import AuthHelper from './AuthHelper'
 import { ROLE_TYPES } from '../../../utils/constants'
 import AuthSchema from '../schema/AuthSchema'
+import companyModel from '../../Companies/model/CompanyModel'
 
 const ADMIN_ROLES = [ROLE_TYPES.ADMIN] as const
 type RoleType = (typeof ROLE_TYPES)[keyof typeof ROLE_TYPES]
@@ -28,27 +29,29 @@ class AuthController {
 
   async signUp(req: CustomRequest, res: CustomResponse) {
     try {
-      const { name, email, password, role, hourly_rate } = req.body
+      const { name, email, password, company_name } = req.body
 
       const existing = await authModel.findByEmail(email)
       if (existing) {
         return createResponse1({ res, status: STATUS_CODES.CONFLICT, message: res.__('AUTH.EMAIL_EXISTS') })
       }
 
-      const { count } = await authModel.listUsers({ limit: 1 })
-      const normalizedRole = this.normalizeRole(role)
-      const assignedRole: RoleType = count === 0 ? ROLE_TYPES.ADMIN : normalizedRole ?? ROLE_TYPES.TEAM_MEMBER
+      const passwordHash = await AuthHelper.hashPassword(password)
 
-      if (count > 0 && !this.isAdminRole(req.user?.role)) {
-        return createResponse1({ res, status: STATUS_CODES.FORBIDDEN, message: res.__('AUTH.ONLY_ADMIN_CREATE') })
+      const normalizedCompanyName = (company_name ?? `${name}'s Company`).trim()
+      if (!normalizedCompanyName) {
+        return createResponse1({ res, status: STATUS_CODES.BAD_REQUEST, message: 'Company name is required to create an account.' })
       }
+
+      const company = await companyModel.createCompany(normalizedCompanyName)
 
       const user = await authModel.createUser({
         name,
         email,
-        password_hash: password,
-        role: assignedRole,
-        hourly_rate: hourly_rate ?? 0
+        password_hash: passwordHash,
+        role: ROLE_TYPES.ADMIN,
+        hourly_rate: 0,
+        company_id: company.id
       })
 
       const token = AuthHelper.generateAccessToken(user)
@@ -70,6 +73,10 @@ class AuthController {
       const user = await authModel.findByEmail(email)
       if (!user) {
         return createResponse1({ res, status: STATUS_CODES.UNAUTHORIZED, message: res.__('AUTH.INVALID_CREDENTIALS') })
+      }
+
+      if (!user.company_id) {
+        return createResponse1({ res, status: STATUS_CODES.FORBIDDEN, message: 'User is not associated with a company.' })
       }
 
       const valid = await user.comparePassword(password)
@@ -96,7 +103,7 @@ class AuthController {
         return createResponse1({ res, status: STATUS_CODES.UNAUTHORIZED, message: res.__('AUTH.NOT_AUTHENTICATED') })
       }
 
-      const user = await authModel.findById(id)
+      const user = await authModel.findById(id, req.user?.company_id)
       if (!user) {
         return createResponse1({ res, status: STATUS_CODES.NOT_FOUND, message: res.__('AUTH.USER_NOT_FOUND') })
       }
@@ -116,8 +123,14 @@ class AuthController {
       const limit = Number(req.query.limit ?? 20)
       const offset = (page - 1) * limit
 
+      const companyId = req.user?.company_id
+      if (!companyId) {
+        return createResponse1({ res, status: STATUS_CODES.FORBIDDEN, message: 'Company context is required.' })
+      }
+
       const { rows, count } = await authModel.listUsers({
         search: req.query.search as string,
+        company_id: companyId,
         limit,
         offset
       })
@@ -139,7 +152,12 @@ class AuthController {
   async getUser(req: CustomRequest, res: CustomResponse) {
     try {
       const id = Number(req.params.id)
-      const user = await authModel.findById(id)
+      const companyId = req.user?.company_id
+      if (!companyId) {
+        return createResponse1({ res, status: STATUS_CODES.FORBIDDEN, message: 'Company context is required.' })
+      }
+
+      const user = await authModel.findById(id, companyId)
 
       if (!user) {
         return createResponse1({ res, status: STATUS_CODES.NOT_FOUND, message: res.__('AUTH.USER_NOT_FOUND') })
@@ -156,6 +174,11 @@ class AuthController {
     try {
       const { name, email, password, role, hourly_rate } = req.body
 
+      const companyId = req.user?.company_id
+      if (!companyId) {
+        return createResponse1({ res, status: STATUS_CODES.FORBIDDEN, message: 'Company context is required.' })
+      }
+
       const existing = await authModel.findByEmail(email)
       if (existing) {
         return createResponse1({ res, status: STATUS_CODES.CONFLICT, message: res.__('AUTH.EMAIL_EXISTS') })
@@ -163,12 +186,15 @@ class AuthController {
 
       const assignedRole = this.normalizeRole(role) ?? ROLE_TYPES.TEAM_MEMBER
 
+      const passwordHash = await AuthHelper.hashPassword(password)
+
       const user = await authModel.createUser({
         name,
         email,
-        password_hash: password,
+        password_hash: passwordHash,
         role: assignedRole,
-        hourly_rate: hourly_rate ?? 0
+        hourly_rate: hourly_rate ?? 0,
+        company_id: companyId
       })
 
       return createResponse(res, STATUS_CODES.CREATED, res.__('AUTH.USER_CREATED'), this.sanitize(user))
@@ -183,7 +209,12 @@ class AuthController {
       const id = Number(req.params.id)
       const { name, email, role, hourly_rate, password } = req.body
 
-      const user = await authModel.findById(id)
+      const companyId = req.user?.company_id
+      if (!companyId) {
+        return createResponse1({ res, status: STATUS_CODES.FORBIDDEN, message: 'Company context is required.' })
+      }
+
+      const user = await authModel.findById(id, companyId)
       if (!user) {
         return createResponse1({ res, status: STATUS_CODES.NOT_FOUND, message: res.__('AUTH.USER_NOT_FOUND') })
       }
@@ -195,13 +226,19 @@ class AuthController {
         }
       }
 
-      const updated = await authModel.updateById(id, {
+      const passwordHash = password ? await AuthHelper.hashPassword(password) : undefined
+
+      const updated = await authModel.updateById(
+        id,
+        {
         name,
         email,
         role: this.normalizeRole(role),
         hourly_rate,
-        ...(password ? { password_hash: password } : {})
-      })
+        ...(passwordHash ? { password_hash: passwordHash } : {})
+        },
+        companyId
+      )
 
       if (!updated) {
         return createResponse1({ res, status: STATUS_CODES.NOT_FOUND, message: res.__('AUTH.USER_NOT_FOUND') })
@@ -221,7 +258,12 @@ class AuthController {
         return createResponse1({ res, status: STATUS_CODES.BAD_REQUEST, message: res.__('AUTH.CANNOT_DELETE_SELF') })
       }
 
-      const deleted = await authModel.deleteById(id)
+      const companyId = req.user?.company_id
+      if (!companyId) {
+        return createResponse1({ res, status: STATUS_CODES.FORBIDDEN, message: 'Company context is required.' })
+      }
+
+      const deleted = await authModel.deleteById(id, companyId)
       if (!deleted) {
         return createResponse1({ res, status: STATUS_CODES.NOT_FOUND, message: res.__('AUTH.USER_NOT_FOUND') })
       }
@@ -242,7 +284,7 @@ class AuthController {
         return createResponse1({ res, status: STATUS_CODES.UNAUTHORIZED, message: res.__('AUTH.NOT_AUTHENTICATED') })
       }
 
-      const user = await authModel.findById(id)
+      const user = await authModel.findById(id, req.user?.company_id)
       if (!user) {
         return createResponse1({ res, status: STATUS_CODES.NOT_FOUND, message: res.__('AUTH.USER_NOT_FOUND') })
       }
@@ -252,7 +294,9 @@ class AuthController {
         return createResponse1({ res, status: STATUS_CODES.UNAUTHORIZED, message: res.__('AUTH.PASSWORD_MISMATCH') })
       }
 
-      await authModel.updateById(id, { password_hash: newPassword })
+      const hashedPassword = await AuthHelper.hashPassword(newPassword)
+
+      await authModel.updateById(id, { password_hash: hashedPassword })
 
       return createResponse1({ res, status: STATUS_CODES.OK, message: res.__('AUTH.PASSWORD_UPDATED') })
     } catch (error) {
@@ -263,4 +307,3 @@ class AuthController {
 }
 
 export default new AuthController()
-

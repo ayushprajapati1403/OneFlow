@@ -62,6 +62,88 @@ export const ROLE_TYPES = {
   FINANCE: 'finance'
 } as const
 
+export const CONTACT_TYPES = {
+  CLIENT: 'client',
+  VENDOR: 'vendor',
+  BOTH: 'both'
+} as const
+
+export const PROJECT_STATUS = {
+  PLANNED: 'planned',
+  ACTIVE: 'active',
+  ON_HOLD: 'on_hold',
+  COMPLETED: 'completed'
+} as const
+
+export const PROJECT_DEFAULT_LIMIT = 20
+
+export const TASK_STATUS = {
+  TODO: 'todo',
+  IN_PROGRESS: 'in_progress',
+  REVIEW: 'review',
+  DONE: 'done'
+} as const
+
+export const TASK_PRIORITY = {
+  LOW: 'low',
+  MEDIUM: 'medium',
+  HIGH: 'high'
+} as const
+
+export const TASK_DEFAULT_LIMIT = 20
+
+export const TIMESHEET_DEFAULT_LIMIT = 20
+
+export const SALES_ORDER_STATUS = {
+  DRAFT: 'draft',
+  SENT: 'sent',
+  APPROVED: 'approved',
+  PAID: 'paid',
+  DECLINED: 'declined'
+} as const
+
+export const SALES_ORDER_DEFAULT_LIMIT = 20
+
+export const PURCHASE_ORDER_STATUS = {
+  DRAFT: 'draft',
+  SENT: 'sent',
+  APPROVED: 'approved',
+  PAID: 'paid',
+  DECLINED: 'declined'
+} as const
+
+export const PURCHASE_ORDER_DEFAULT_LIMIT = 20
+
+export const INVOICE_STATUS = {
+  DRAFT: 'draft',
+  SENT: 'sent',
+  APPROVED: 'approved',
+  PAID: 'paid',
+  DECLINED: 'declined'
+} as const
+
+export const INVOICE_DEFAULT_LIMIT = 20
+
+export const VENDOR_BILL_STATUS = {
+  DRAFT: 'draft',
+  SENT: 'sent',
+  APPROVED: 'approved',
+  PAID: 'paid',
+  DECLINED: 'declined'
+} as const
+
+export const VENDOR_BILL_DEFAULT_LIMIT = 20
+
+export const EXPENSE_STATUS = {
+  DRAFT: 'draft',
+  SENT: 'sent',
+  APPROVED: 'approved',
+  PAID: 'paid',
+  DECLINED: 'declined'
+} as const
+
+export const EXPENSE_DEFAULT_LIMIT = 20
+
 export const DEFAULT_PAGE = 1
 export const DECIMAL_VALUE = 10
 

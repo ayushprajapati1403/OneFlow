@@ -71,10 +71,10 @@ export const initializeDatabase = async () => {
     console.log('Database connection has been established successfully.')
 
     // initializeModels()
-    // Sync models with database (only in development)
-    if (process.env.NODE_ENV === 'development') {
+    // Rely on migrations for schema management to avoid destructive syncs
+    if (process.env.DB_SYNC === 'true') {
       await sequelize.sync({ alter: true })
-      console.log('Database models synchronized.')
+      console.log('Database models synchronized via sequelize.sync.')
     }
   } catch (error) {
     console.error('Unable to connect to the database:', error)

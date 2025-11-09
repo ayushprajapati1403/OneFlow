@@ -14,7 +14,7 @@ class AuthValidations {
     return false
   }
 
-  signUp(req: Request, res: Response, next: NextFunction) {
+  signUp = (req: Request, res: Response, next: NextFunction) => {
     const { name, email, password, role } = req.body
     const errors: Record<string, string> = {}
 
@@ -28,7 +28,7 @@ class AuthValidations {
     if (!this.sendErrors(res, errors)) next()
   }
 
-  signIn(req: Request, res: Response, next: NextFunction) {
+  signIn = (req: Request, res: Response, next: NextFunction) => {
     const { email, password } = req.body
     const errors: Record<string, string> = {}
 
@@ -39,7 +39,7 @@ class AuthValidations {
     if (!this.sendErrors(res, errors)) next()
   }
 
-  createUser(req: Request, res: Response, next: NextFunction) {
+  createUser = (req: Request, res: Response, next: NextFunction) => {
     const { name, email, password, role } = req.body
     const errors: Record<string, string> = {}
 
@@ -53,7 +53,7 @@ class AuthValidations {
     if (!this.sendErrors(res, errors)) next()
   }
 
-  updateUser(req: Request, res: Response, next: NextFunction) {
+  updateUser = (req: Request, res: Response, next: NextFunction) => {
     const { email, role, password } = req.body
     const errors: Record<string, string> = {}
 
@@ -65,7 +65,7 @@ class AuthValidations {
     if (!this.sendErrors(res, errors)) next()
   }
 
-  changePassword(req: Request, res: Response, next: NextFunction) {
+  changePassword = (req: Request, res: Response, next: NextFunction) => {
     const { currentPassword, newPassword } = req.body
     const errors: Record<string, string> = {}
 

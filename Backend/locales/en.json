@@ -18,6 +18,78 @@
     "USER_NOT_FOUND": "User not found.",
     "INSUFFICIENT_PERMISSIONS": "You do not have permission to perform this action."
   },
+  "CONTACT": {
+    "LIST_SUCCESS": "Contacts retrieved successfully.",
+    "CREATE_SUCCESS": "Contact created successfully.",
+    "DETAIL_SUCCESS": "Contact details retrieved successfully.",
+    "UPDATE_SUCCESS": "Contact updated successfully.",
+    "DELETE_SUCCESS": "Contact deleted successfully.",
+    "NOT_FOUND": "Contact not found."
+  },
+  "PROJECT": {
+    "LIST_SUCCESS": "Projects retrieved successfully.",
+    "CREATE_SUCCESS": "Project created successfully.",
+    "DETAIL_SUCCESS": "Project details retrieved successfully.",
+    "UPDATE_SUCCESS": "Project updated successfully.",
+    "DELETE_SUCCESS": "Project deleted successfully.",
+    "NOT_FOUND": "Project not found."
+  },
+  "TASK": {
+    "LIST_SUCCESS": "Tasks retrieved successfully.",
+    "CREATE_SUCCESS": "Task created successfully.",
+    "DETAIL_SUCCESS": "Task details retrieved successfully.",
+    "UPDATE_SUCCESS": "Task updated successfully.",
+    "DELETE_SUCCESS": "Task deleted successfully.",
+    "NOT_FOUND": "Task not found."
+  },
+  "TIMESHEET": {
+    "LIST_SUCCESS": "Timesheets retrieved successfully.",
+    "CREATE_SUCCESS": "Timesheet created successfully.",
+    "DETAIL_SUCCESS": "Timesheet details retrieved successfully.",
+    "UPDATE_SUCCESS": "Timesheet updated successfully.",
+    "DELETE_SUCCESS": "Timesheet deleted successfully.",
+    "NOT_FOUND": "Timesheet not found."
+  },
+  "SALES_ORDER": {
+    "LIST_SUCCESS": "Sales orders retrieved successfully.",
+    "CREATE_SUCCESS": "Sales order created successfully.",
+    "DETAIL_SUCCESS": "Sales order details retrieved successfully.",
+    "UPDATE_SUCCESS": "Sales order updated successfully.",
+    "DELETE_SUCCESS": "Sales order deleted successfully.",
+    "NOT_FOUND": "Sales order not found."
+  },
+  "PURCHASE_ORDER": {
+    "LIST_SUCCESS": "Purchase orders retrieved successfully.",
+    "CREATE_SUCCESS": "Purchase order created successfully.",
+    "DETAIL_SUCCESS": "Purchase order details retrieved successfully.",
+    "UPDATE_SUCCESS": "Purchase order updated successfully.",
+    "DELETE_SUCCESS": "Purchase order deleted successfully.",
+    "NOT_FOUND": "Purchase order not found."
+  },
+  "INVOICE": {
+    "LIST_SUCCESS": "Invoices retrieved successfully.",
+    "CREATE_SUCCESS": "Invoice created successfully.",
+    "DETAIL_SUCCESS": "Invoice details retrieved successfully.",
+    "UPDATE_SUCCESS": "Invoice updated successfully.",
+    "DELETE_SUCCESS": "Invoice deleted successfully.",
+    "NOT_FOUND": "Invoice not found."
+  },
+  "VENDOR_BILL": {
+    "LIST_SUCCESS": "Vendor bills retrieved successfully.",
+    "CREATE_SUCCESS": "Vendor bill created successfully.",
+    "DETAIL_SUCCESS": "Vendor bill details retrieved successfully.",
+    "UPDATE_SUCCESS": "Vendor bill updated successfully.",
+    "DELETE_SUCCESS": "Vendor bill deleted successfully.",
+    "NOT_FOUND": "Vendor bill not found."
+  },
+  "EXPENSE": {
+    "LIST_SUCCESS": "Expenses retrieved successfully.",
+    "CREATE_SUCCESS": "Expense created successfully.",
+    "DETAIL_SUCCESS": "Expense details retrieved successfully.",
+    "UPDATE_SUCCESS": "Expense updated successfully.",
+    "DELETE_SUCCESS": "Expense deleted successfully.",
+    "NOT_FOUND": "Expense not found."
+  },
   "VALIDATIONS": {
     "required": "%s is required.",
     "invalid": "%s is invalid.",

@@ -1,0 +1,873 @@
+{
+  "info": {
+    "_postman_id": "7af5a1a9-0a8d-4126-9fd0-80a1d76b7c5a",
+    "name": "OneFlow API",
+    "description": "Complete Postman collection covering OneFlow backend flows: auth, seeding, projects, tasks, timesheets, financial documents, and expenses.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "base_url", "value": "http://localhost:3000/oneflow/api/v1" },
+    { "key": "adminEmail", "value": "jane.admin@example2.com" },
+    { "key": "adminPassword", "value": "Admin@123" },
+    { "key": "token", "value": "" },
+    { "key": "currentUserUuid", "value": "" },
+    { "key": "client_uuid", "value": "" },
+    { "key": "vendor_uuid", "value": "" },
+    { "key": "team_member_uuid", "value": "" },
+    { "key": "project_uuid", "value": "" },
+    { "key": "task_uuid", "value": "" },
+    { "key": "timesheet_uuid", "value": "" },
+    { "key": "sales_order_uuid", "value": "" },
+    { "key": "purchase_order_uuid", "value": "" },
+    { "key": "invoice_uuid", "value": "" },
+    { "key": "vendor_bill_uuid", "value": "" },
+    { "key": "expense_uuid", "value": "" }
+  ],
+  "item": [
+    {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "Login (Admin)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{adminEmail}}\",\n  \"password\": \"{{adminPassword}}\"\n}\n"
+            },
+            "url": {
+              "raw": "{{base_url}}/Auth/login",
+              "host": [ "{{base_url}}" ],
+              "path": [ "Auth", "login" ]
+            },
+            "description": "Authenticate as an admin user and capture Bearer token for subsequent requests."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () { pm.response.to.have.status(200); });",
+                  "const json = pm.response.json();",
+                  "pm.test(\"Response contains token\", function () {",
+                  "  pm.expect(json.data).to.have.property('token');",
+                  "  pm.expect(json.data).to.have.property('user');",
+                  "});",
+                  "pm.collectionVariables.set('token', json.data.token);",
+                  "pm.collectionVariables.set('currentUserUuid', json.data.user.uuid);",
+                  "pm.test(\"Token stored\", function () {",
+                  "  pm.expect(pm.collectionVariables.get('token')).to.be.a('string').and.not.empty;",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Analytics",
+      "item": [
+        {
+          "name": "Dashboard Analytics",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/Analytics/dashboard",
+              "host": [ "{{base_url}}" ],
+              "path": [ "Analytics", "dashboard" ]
+            },
+            "description": "Retrieve aggregated KPIs, project trends, resource utilization, and revenue vs cost data for dashboards."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () { pm.response.to.have.status(200); });",
+                  "const json = pm.response.json();",
+                  "pm.test(\"Response contains project trends\", function () {",
+                  "  pm.expect(json.data).to.have.property('projectTrends');",
+                  "  pm.expect(json.data.projectTrends).to.be.an('array');",
+                  "});",
+                  "pm.test(\"Response contains KPI summary\", function () {",
+                  "  pm.expect(json.data).to.have.property('kpi');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Seed Data",
+      "description": "Seed reusable entities (contacts, users) required by downstream requests.",
+      "item": [
+        {
+          "name": "Create Client Contact",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const timestamp = Date.now();",
+                  "pm.variables.set('clientName', `Acme Client ${timestamp}`);",
+                  "pm.variables.set('clientEmail', `client_${timestamp}@example.com`);",
+                  "pm.variables.set('clientPhone', `+1-555-${timestamp.toString().slice(-4)}`);"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 201\", function () { pm.response.to.have.status(201); });",
+                  "const json = pm.response.json();",
+                  "pm.collectionVariables.set('client_uuid', json.data.uuid);",
+                  "pm.test(\"Client UUID stored\", function () {",
+                  "  pm.expect(pm.collectionVariables.get('client_uuid')).to.be.a('string').and.not.empty;",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"{{clientName}}\",\n  \"type\": \"client\",\n  \"email\": \"{{clientEmail}}\",\n  \"phone\": \"{{clientPhone}}\",\n  \"address\": \"123 Demo Street\"\n}\n"
+            },
+            "url": {
+              "raw": "{{base_url}}/Contacts",
+              "host": [ "{{base_url}}" ],
+              "path": [ "Contacts" ]
+            },
+            "description": "Create a client contact for projects, sales orders, and invoices."
+          }
+        },
+        {
+          "name": "Create Vendor Contact",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const timestamp = Date.now();",
+                  "pm.variables.set('vendorName', `Supply Co ${timestamp}`);",
+                  "pm.variables.set('vendorEmail', `vendor_${timestamp}@example.com`);"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 201\", function () { pm.response.to.have.status(201); });",
+                  "const json = pm.response.json();",
+                  "pm.collectionVariables.set('vendor_uuid', json.data.uuid);",
+                  "pm.test(\"Vendor UUID stored\", function () {",
+                  "  pm.expect(pm.collectionVariables.get('vendor_uuid')).to.be.a('string').and.not.empty;",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"{{vendorName}}\",\n  \"type\": \"vendor\",\n  \"email\": \"{{vendorEmail}}\",\n  \"phone\": \"+1-555-0000\",\n  \"address\": \"45 Supplier Way\"\n}\n"
+            },
+            "url": {
+              "raw": "{{base_url}}/Contacts",
+              "host": [ "{{base_url}}" ],
+              "path": [ "Contacts" ]
+            },
+            "description": "Create a vendor contact for purchase orders and vendor bills."
+          }
+        },
+        {
+          "name": "Create Team Member",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const timestamp = Date.now();",
+                  "pm.variables.set('teamMemberName', `Demo Member ${timestamp}`);",
+                  "pm.variables.set('teamMemberEmail', `member_${timestamp}@example.com`);"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 201\", function () { pm.response.to.have.status(201); });",
+                  "const json = pm.response.json();",
+                  "pm.collectionVariables.set('team_member_uuid', json.data.uuid);",
+                  "pm.test(\"Team member UUID stored\", function () {",
+                  "  pm.expect(pm.collectionVariables.get('team_member_uuid')).to.be.a('string').and.not.empty;",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"{{teamMemberName}}\",\n  \"email\": \"{{teamMemberEmail}}\",\n  \"password\": \"Demo@1234\",\n  \"role\": \"team_member\",\n  \"hourly_rate\": 65\n}\n"
+            },
+            "url": {
+              "raw": "{{base_url}}/Auth/users",
+              "host": [ "{{base_url}}" ],
+              "path": [ "Auth", "users" ]
+            },
+            "description": "Create a demo team member for task assignment and timesheets."
+          }
+        },
+        {
+          "name": "List Contacts",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/Contacts?page=1&limit=10",
+              "host": [ "{{base_url}}" ],
+              "path": [ "Contacts" ],
+              "query": [
+                { "key": "page", "value": "1" },
+                { "key": "limit", "value": "10" }
+              ]
+            },
+            "description": "Confirm seeded contacts are available."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () { pm.response.to.have.status(200); });",
+                  "const json = pm.response.json();",
+                  "pm.test(\"Contacts array exists\", function () { pm.expect(json.data.contacts).to.be.an('array'); });"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Projects",
+      "item": [
+        {
+          "name": "List Projects",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/Projects?page=1&limit=10",
+              "host": [ "{{base_url}}" ],
+              "path": [ "Projects" ],
+              "query": [
+                { "key": "page", "value": "1" },
+                { "key": "limit", "value": "10" }
+              ]
+            },
+            "description": "Fetch paginated projects (useful when collection re-run)."
+          }
+        },
+        {
+          "name": "Create Project",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const timestamp = Date.now();",
+                  "pm.variables.set('projectName', `Website Revamp ${timestamp}`);"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 201\", function () { pm.response.to.have.status(201); });",
+                  "const json = pm.response.json();",
+                  "pm.collectionVariables.set('project_uuid', json.data.uuid);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"{{projectName}}\",\n  \"description\": \"Seed project for integration tests\",\n  \"client_uuid\": \"{{client_uuid}}\",\n  \"manager_uuid\": \"{{currentUserUuid}}\",\n  \"status\": \"planned\",\n  \"start_date\": \"2025-01-01\",\n  \"end_date\": \"2025-03-31\",\n  \"budget\": 150000\n}\n"
+            },
+            "url": {
+              "raw": "{{base_url}}/Projects",
+              "host": [ "{{base_url}}" ],
+              "path": [ "Projects" ]
+            },
+            "description": "Create project linked to seeded client."
+          }
+        },
+        {
+          "name": "Get Project",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/Projects/{{project_uuid}}",
+              "host": [ "{{base_url}}" ],
+              "path": [ "Projects", "{{project_uuid}}" ]
+            },
+            "description": "Retrieve project details (includes client/manager)."
+          }
+        },
+        {
+          "name": "Update Project",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"active\",\n  \"budget\": 155000\n}\n"
+            },
+            "url": {
+              "raw": "{{base_url}}/Projects/{{project_uuid}}",
+              "host": [ "{{base_url}}" ],
+              "path": [ "Projects", "{{project_uuid}}" ]
+            },
+            "description": "Activate project and tweak budget."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Tasks",
+      "item": [
+        {
+          "name": "List Tasks",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/Tasks?page=1&limit=10",
+              "host": [ "{{base_url}}" ],
+              "path": [ "Tasks" ],
+              "query": [
+                { "key": "page", "value": "1" },
+                { "key": "limit", "value": "10" }
+              ]
+            },
+            "description": "Initial task listing (likely empty on first run)."
+          }
+        },
+        {
+          "name": "Create Task",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"project_uuid\": \"{{project_uuid}}\",\n  \"title\": \"Project Kickoff\",\n  \"description\": \"Conduct kickoff meeting with stakeholders\",\n  \"status\": \"todo\",\n  \"priority\": \"high\",\n  \"assignee_uuid\": \"{{team_member_uuid}}\",\n  \"due_date\": \"2025-01-10\",\n  \"assigned_user_uuids\": [\n    \"{{team_member_uuid}}\"\n  ]\n}\n"
+            },
+            "url": {
+              "raw": "{{base_url}}/Tasks",
+              "host": [ "{{base_url}}" ],
+              "path": [ "Tasks" ]
+            },
+            "description": "Create a kickoff task assigned to the seeded team member."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 201\", function () { pm.response.to.have.status(201); });",
+                  "const json = pm.response.json();",
+                  "pm.collectionVariables.set('task_uuid', json.data.uuid);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Update Task Status",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"in_progress\"\n}\n"
+            },
+            "url": {
+              "raw": "{{base_url}}/Tasks/{{task_uuid}}",
+              "host": [ "{{base_url}}" ],
+              "path": [ "Tasks", "{{task_uuid}}" ]
+            },
+            "description": "Move task into progress for demonstration."
+          }
+        },
+        {
+          "name": "Get Task",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/Tasks/{{task_uuid}}",
+              "host": [ "{{base_url}}" ],
+              "path": [ "Tasks", "{{task_uuid}}" ]
+            },
+            "description": "Fetch task details including assignee and assignments."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Timesheets",
+      "item": [
+        {
+          "name": "Create Timesheet Entry",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"project_uuid\": \"{{project_uuid}}\",\n  \"task_uuid\": \"{{task_uuid}}\",\n  \"user_uuid\": \"{{team_member_uuid}}\",\n  \"date\": \"2025-01-05\",\n  \"hours\": 3.5,\n  \"description\": \"Project kickoff preparation\",\n  \"billable\": true,\n  \"cost_rate\": 65\n}\n"
+            },
+            "url": {
+              "raw": "{{base_url}}/Timesheets",
+              "host": [ "{{base_url}}" ],
+              "path": [ "Timesheets" ]
+            },
+            "description": "Log time against the kickoff task."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 201\", function () { pm.response.to.have.status(201); });",
+                  "const json = pm.response.json();",
+                  "pm.collectionVariables.set('timesheet_uuid', json.data.uuid);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Update Timesheet Hours",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"hours\": 4,\n  \"description\": \"Kickoff preparation with stakeholder sync\"\n}\n"
+            },
+            "url": {
+              "raw": "{{base_url}}/Timesheets/{{timesheet_uuid}}",
+              "host": [ "{{base_url}}" ],
+              "path": [ "Timesheets", "{{timesheet_uuid}}" ]
+            },
+            "description": "Adjust logged hours."
+          }
+        },
+        {
+          "name": "List Timesheets",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/Timesheets?page=1&limit=10",
+              "host": [ "{{base_url}}" ],
+              "path": [ "Timesheets" ],
+              "query": [
+                { "key": "page", "value": "1" },
+                { "key": "limit", "value": "10" }
+              ]
+            },
+            "description": "Review paginated timesheet entries."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Sales Orders",
+      "item": [
+        {
+          "name": "Create Sales Order",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"project_uuid\": \"{{project_uuid}}\",\n  \"client_uuid\": \"{{client_uuid}}\",\n  \"date\": \"2025-01-06\",\n  \"status\": \"draft\",\n  \"items\": [\n    { \"description\": \"Discovery Phase\", \"quantity\": 1, \"unit_price\": 60000 }\n  ],\n  \"total_amount\": 60000\n}\n"
+            },
+            "url": {
+              "raw": "{{base_url}}/SalesOrders",
+              "host": [ "{{base_url}}" ],
+              "path": [ "SalesOrders" ]
+            },
+            "description": "Create a sales order tied to the project and client."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 201\", function () { pm.response.to.have.status(201); });",
+                  "const json = pm.response.json();",
+                  "pm.collectionVariables.set('sales_order_uuid', json.data.uuid);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Update Sales Order Status",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"sent\"\n}\n"
+            },
+            "url": {
+              "raw": "{{base_url}}/SalesOrders/{{sales_order_uuid}}",
+              "host": [ "{{base_url}}" ],
+              "path": [ "SalesOrders", "{{sales_order_uuid}}" ]
+            },
+            "description": "Send the sales order to the client."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Purchase Orders",
+      "item": [
+        {
+          "name": "Create Purchase Order",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"project_uuid\": \"{{project_uuid}}\",\n  \"vendor_uuid\": \"{{vendor_uuid}}\",\n  \"date\": \"2025-01-07\",\n  \"status\": \"draft\",\n  \"items\": [\n    { \"description\": \"Design Assets\", \"quantity\": 1, \"unit_price\": 12000 }\n  ],\n  \"total_amount\": 12000\n}\n"
+            },
+            "url": {
+              "raw": "{{base_url}}/PurchaseOrders",
+              "host": [ "{{base_url}}" ],
+              "path": [ "PurchaseOrders" ]
+            },
+            "description": "Create purchase order for vendor expenses."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 201\", function () { pm.response.to.have.status(201); });",
+                  "const json = pm.response.json();",
+                  "pm.collectionVariables.set('purchase_order_uuid', json.data.uuid);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Approve Purchase Order",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"approved\"\n}\n"
+            },
+            "url": {
+              "raw": "{{base_url}}/PurchaseOrders/{{purchase_order_uuid}}",
+              "host": [ "{{base_url}}" ],
+              "path": [ "PurchaseOrders", "{{purchase_order_uuid}}" ]
+            },
+            "description": "Approve the purchase order once vendor quote is validated."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Invoices",
+      "item": [
+        {
+          "name": "Create Invoice",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"project_uuid\": \"{{project_uuid}}\",\n  \"sales_order_uuid\": \"{{sales_order_uuid}}\",\n  \"client_uuid\": \"{{client_uuid}}\",\n  \"date\": \"2025-01-15\",\n  \"due_date\": \"2025-02-15\",\n  \"status\": \"draft\",\n  \"items\": [\n    { \"description\": \"Milestone 1\", \"quantity\": 1, \"unit_price\": 30000 }\n  ],\n  \"total_amount\": 30000\n}\n"
+            },
+            "url": {
+              "raw": "{{base_url}}/Invoices",
+              "host": [ "{{base_url}}" ],
+              "path": [ "Invoices" ]
+            },
+            "description": "Create invoice linked to the sales order."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 201\", function () { pm.response.to.have.status(201); });",
+                  "const json = pm.response.json();",
+                  "pm.collectionVariables.set('invoice_uuid', json.data.uuid);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Mark Invoice Sent",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"sent\"\n}\n"
+            },
+            "url": {
+              "raw": "{{base_url}}/Invoices/{{invoice_uuid}}",
+              "host": [ "{{base_url}}" ],
+              "path": [ "Invoices", "{{invoice_uuid}}" ]
+            },
+            "description": "Advance invoice to sent status."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Vendor Bills",
+      "item": [
+        {
+          "name": "Create Vendor Bill",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"project_uuid\": \"{{project_uuid}}\",\n  \"purchase_order_uuid\": \"{{purchase_order_uuid}}\",\n  \"vendor_uuid\": \"{{vendor_uuid}}\",\n  \"date\": \"2025-01-20\",\n  \"due_date\": \"2025-02-05\",\n  \"status\": \"draft\",\n  \"items\": [\n    { \"description\": \"Design Assets Delivery\", \"quantity\": 1, \"unit_price\": 12000 }\n  ],\n  \"total_amount\": 12000\n}\n"
+            },
+            "url": {
+              "raw": "{{base_url}}/VendorBills",
+              "host": [ "{{base_url}}" ],
+              "path": [ "VendorBills" ]
+            },
+            "description": "Record vendor bill referencing purchase order."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 201\", function () { pm.response.to.have.status(201); });",
+                  "const json = pm.response.json();",
+                  "pm.collectionVariables.set('vendor_bill_uuid', json.data.uuid);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Approve Vendor Bill",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"approved\"\n}\n"
+            },
+            "url": {
+              "raw": "{{base_url}}/VendorBills/{{vendor_bill_uuid}}",
+              "host": [ "{{base_url}}" ],
+              "path": [ "VendorBills", "{{vendor_bill_uuid}}" ]
+            },
+            "description": "Approve vendor bill for payment."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Expenses",
+      "item": [
+        {
+          "name": "Create Expense",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"project_uuid\": \"{{project_uuid}}\",\n  \"user_uuid\": \"{{team_member_uuid}}\",\n  \"description\": \"Travel to client site\",\n  \"amount\": 350.5,\n  \"date\": \"2025-01-08\",\n  \"billable\": true,\n  \"status\": \"draft\",\n  \"receipt_url\": \"https://example.com/receipts/travel.pdf\"\n}\n"
+            },
+            "url": {
+              "raw": "{{base_url}}/Expenses",
+              "host": [ "{{base_url}}" ],
+              "path": [ "Expenses" ]
+            },
+            "description": "Log a billable expense for the project."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status code is 201\", function () { pm.response.to.have.status(201); });",
+                  "const json = pm.response.json();",
+                  "pm.collectionVariables.set('expense_uuid', json.data.uuid);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Approve Expense",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"approved\"\n}\n"
+            },
+            "url": {
+              "raw": "{{base_url}}/Expenses/{{expense_uuid}}",
+              "host": [ "{{base_url}}" ],
+              "path": [ "Expenses", "{{expense_uuid}}" ]
+            },
+            "description": "Approve the submitted expense."
+          }
+        },
+        {
+          "name": "List Expenses",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/Expenses?page=1&limit=10",
+              "host": [ "{{base_url}}" ],
+              "path": [ "Expenses" ],
+              "query": [
+                { "key": "page", "value": "1" },
+                { "key": "limit", "value": "10" }
+              ]
+            },
+            "description": "Review paginated expenses."
+          }
+        }
+      ]
+    }
+  ]
+}
+

@@ -9,6 +9,7 @@ declare namespace Environment {
       id: number
       email: string
       role: string
+      company_id?: number
     }
     custom?: CustomRequestObject
   }

@@ -7,6 +7,7 @@ type CreateUserAttributes = {
   password_hash: string
   role?: AuthSchema['role']
   hourly_rate?: number
+  company_id?: number | null
 }
 type UpdateUserAttributes = Partial<CreateUserAttributes>
 
@@ -26,22 +27,48 @@ class AuthModel {
     return AuthSchema.findOne({ where: { email } })
   }
 
-  async findById(id: number): Promise<AuthSchema | null> {
-    return AuthSchema.findByPk(id)
+  async findByUuid(uuid: string, company_id?: number): Promise<AuthSchema | null> {
+    return AuthSchema.findOne({
+      where: {
+        uuid,
+        ...(company_id ? { company_id } : {})
+      }
+    })
   }
 
-  async listUsers(options: UserQueryOptions = {}): Promise<{ rows: AuthSchema[]; count: number }> {
-    const where = options.search
-      ? {
-          [Op.or]: [
-            { name: { [Op.iLike]: `%${options.search.trim()}%` } },
-            { email: { [Op.iLike]: `%${options.search.trim()}%` } }
-          ]
+  async findByUuids(uuids: string[], company_id?: number): Promise<AuthSchema[]> {
+    if (!uuids.length) return []
+    return AuthSchema.findAll({
+      where: {
+        uuid: uuids,
+        ...(company_id ? { company_id } : {})
+      }
+    })
+  }
+
+  async findById(id: number, company_id?: number): Promise<AuthSchema | null> {
+    return AuthSchema.findOne({
+      where: {
+        id,
+        ...(company_id ? { company_id } : {})
+      }
+    })
+  }
+
+  async listUsers(options: UserQueryOptions & { company_id?: number } = {}): Promise<{ rows: AuthSchema[]; count: number }> {
+    const conditions: any = {}
+
+    if (options.search?.trim()) {
+      const term = `%${options.search.trim()}%`
+      conditions[Op.or] = [{ name: { [Op.iLike]: term } }, { email: { [Op.iLike]: term } }]
         }
-      : undefined
+
+    if (options.company_id) {
+      conditions.company_id = options.company_id
+    }
 
     return AuthSchema.findAndCountAll({
-      where,
+      where: Object.keys(conditions).length ? conditions : undefined,
       attributes: options.attributes,
       limit: options.limit,
       offset: options.offset,
@@ -49,9 +76,12 @@ class AuthModel {
     })
   }
 
-  async updateById(id: number, data: UpdateUserAttributes): Promise<AuthSchema | null> {
+  async updateById(id: number, data: UpdateUserAttributes, company_id?: number): Promise<AuthSchema | null> {
     const [updatedCount, rows] = await AuthSchema.update(data, {
-      where: { id },
+      where: {
+        id,
+        ...(company_id ? { company_id } : {})
+      },
       returning: true,
       individualHooks: true
     })
@@ -63,8 +93,13 @@ class AuthModel {
     return rows[0]
   }
 
-  async deleteById(id: number): Promise<number> {
-    return AuthSchema.destroy({ where: { id } })
+  async deleteById(id: number, company_id?: number): Promise<number> {
+    return AuthSchema.destroy({
+      where: {
+        id,
+        ...(company_id ? { company_id } : {})
+      }
+    })
   }
 }
 

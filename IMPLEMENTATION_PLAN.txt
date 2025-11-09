@@ -1,0 +1,56 @@
+OneFlow Multi-Tenant & Role-Governed Enhancements
+=================================================
+
+Overview
+--------
+Target: transform the current single-tenant, role-agnostic system into a multi-tenant platform where:
+1. Every user belongs to a company (tenant).
+2. All domain objects (contacts, projects, tasks, financial docs, timesheets) are scoped to that company.
+3. Roles (admin, project_manager, team_member, finance, sales) drive what each user can view or mutate.
+4. The UI exposes management surfaces for company contacts and users.
+
+Implementation Roadmap
+----------------------
+Step 1: Data Model & Migrations
+  - Add `companies` table.
+  - Add `company_id` FK to users, contacts, projects, tasks, timesheets, sales_orders, purchase_orders, invoices, vendor_bills, expenses.
+  - Ensure cascading rules keep tenant data isolated.
+
+Step 2: Backend Auth & Provisioning
+  - Update sign-up flow: create a new company row; new user = admin of that company.
+  - Introduce middleware helpers to inject `req.company` from authenticated user.
+  - Harden routes to require company context.
+
+Step 3: Backend Scoping & Role Guards
+  - For each list/create/update handler, constrain queries by `company_id`.
+  - Enforce role-based permissions:
+      * Admin: full access within company.
+      * Project Manager: project/task/finance management, invite team members.
+      * Team Member: view own tasks/timesheets, submit expenses.
+      * Finance/Sales: manage financial docs.
+  - Add invite/create-user endpoints restricted to admins.
+
+Step 4: Contacts & Company Management UI
+  - New “Contacts” page with list & create modal scoped to company.
+  - New “Team” page for admins to add/manage users & roles.
+  - Pipe both through the new backend endpoints.
+
+Step 5: Update Existing UI Flows
+  - Projects/Tasks/Timesheets/Finance modals: label & default to company-scoped references only.
+  - Restrict options (assignees, clients, vendors) based on user role.
+  - Update dashboards/analytics to use scoped queries.
+
+Step 6: QA & Postman
+  - Extend Postman collection with tenant-aware scenarios (admin sign-up, invite team, create contacts).
+  - Regression test each role + company boundary.
+
+Status Tracking
+---------------
+☐ Step 1: Data Model & Migrations  
+☐ Step 2: Backend Auth & Provisioning  
+☐ Step 3: Backend Scoping & Role Guards  
+☐ Step 4: Contacts & Company Management UI  
+☐ Step 5: Update Existing UI Flows  
+☐ Step 6: QA & Postman
+
+

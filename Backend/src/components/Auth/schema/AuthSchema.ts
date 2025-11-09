@@ -1,14 +1,17 @@
 import bcrypt from 'bcrypt'
 import { DataTypes, Model, Sequelize } from 'sequelize'
 import sequelize from '../../../utils/dbConfig'
+import CompanySchema from '../../Companies/schema/CompanySchema'
 
 export class AuthSchema extends Model {
   declare id: number
+  declare uuid: string
   declare name: string
   declare email: string
   declare password_hash: string
   declare role: 'admin' | 'project_manager' | 'team_member' | 'finance'
   declare hourly_rate: number
+  declare company_id: number | null
   declare created_at: Date
   declare updated_at: Date
 
@@ -23,6 +26,11 @@ AuthSchema.init(
       type: DataTypes.INTEGER,
       autoIncrement: true,
       primaryKey: true
+    },
+    uuid: {
+      type: DataTypes.UUID,
+      allowNull: false,
+      defaultValue: Sequelize.literal('gen_random_uuid()')
     },
     name: {
       type: DataTypes.STRING(255),
@@ -47,6 +55,16 @@ AuthSchema.init(
       allowNull: false,
       defaultValue: 0
     },
+    company_id: {
+      type: DataTypes.INTEGER,
+      allowNull: true,
+      references: {
+        model: 'companies',
+        key: 'id'
+      },
+      onUpdate: 'CASCADE',
+      onDelete: 'CASCADE'
+    },
     created_at: {
       type: DataTypes.DATE,
       defaultValue: Sequelize.literal('CURRENT_TIMESTAMP')
@@ -64,20 +82,20 @@ AuthSchema.init(
     updatedAt: 'updated_at',
     underscored: true,
     hooks: {
-      beforeCreate: async (instance) => {
-        if (instance.changed('password_hash')) {
-          const salt = await bcrypt.genSalt(12)
-          instance.password_hash = await bcrypt.hash(instance.password_hash, salt)
-        }
-      },
-      beforeUpdate: async (instance) => {
-        if (instance.changed('password_hash')) {
-          const salt = await bcrypt.genSalt(12)
-          instance.password_hash = await bcrypt.hash(instance.password_hash, salt)
+      beforeSave: async (instance) => {
+        const saltRounds = Number(process.env.BCRYPT_SALT_ROUNDS ?? 12)
+        const password = instance.password_hash
+        const needsHash = instance.changed('password_hash') && typeof password === 'string' && !password.startsWith('$2')
+
+        if (needsHash) {
+          instance.password_hash = await bcrypt.hash(password, saltRounds)
         }
       }
     }
   }
 )
+
+AuthSchema.belongsTo(CompanySchema, { foreignKey: 'company_id', as: 'company' })
+CompanySchema.hasMany(AuthSchema, { foreignKey: 'company_id', as: 'users' })
 
 export default AuthSchema

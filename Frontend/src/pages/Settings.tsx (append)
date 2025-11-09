@@ -1,0 +1,307 @@
+type CreateFinanceModalProps = {
+  isOpen: boolean;
+  activeTab: string;
+  loading: boolean;
+  submitting: boolean;
+  values: Record<string, any>;
+  projects: Project[];
+  clients: Contact[];
+  vendors: Contact[];
+  users: AuthUser[];
+  salesOrders: SalesOrder[];
+  purchaseOrders: PurchaseOrder[];
+  onClose: () => void;
+  onFieldChange: (field: string) => (event: ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => void;
+  onSubmit: () => void;
+};
+
+function CreateFinanceModal({
+  isOpen,
+  activeTab,
+  loading,
+  submitting,
+  values,
+  projects,
+  clients,
+  vendors,
+  users,
+  salesOrders,
+  purchaseOrders,
+  onClose,
+  onFieldChange,
+  onSubmit,
+}: CreateFinanceModalProps) {
+  const projectOptions = useMemo(
+    () => [{ value: '', label: 'Unassigned' }, ...projects.map((project) => ({ value: project.uuid, label: project.name }))],
+    [projects],
+  );
+
+  const clientOptions = useMemo(
+    () => [{ value: '', label: 'Select client' }, ...clients.map((client) => ({ value: client.uuid, label: client.name }))],
+    [clients],
+  );
+
+  const vendorOptions = useMemo(
+    () => [{ value: '', label: 'Select vendor' }, ...vendors.map((vendor) => ({ value: vendor.uuid, label: vendor.name }))],
+    [vendors],
+  );
+
+  const userOptions = useMemo(
+    () => [{ value: '', label: 'Select user' }, ...users.map((user) => ({ value: user.uuid, label: `${user.name} (${user.role})` }))],
+    [users],
+  );
+
+  const salesOrderOptions = useMemo(
+    () => [{ value: '', label: 'Unlinked' }, ...salesOrders.map((order) => ({ value: order.uuid, label: order.client?.name ?? order.uuid }))],
+    [salesOrders],
+  );
+
+  const purchaseOrderOptions = useMemo(
+    () => [{ value: '', label: 'Unlinked' }, ...purchaseOrders.map((order) => ({ value: order.uuid, label: order.vendor?.name ?? order.uuid }))],
+    [purchaseOrders],
+  );
+
+  const renderSalesOrderForm = () => (
+    <div className="space-y-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <Select label="Project" value={values.project_uuid ?? ''} onChange={onFieldChange('project_uuid')} options={projectOptions} />
+        <Select label="Client" value={values.client_uuid ?? ''} onChange={onFieldChange('client_uuid')} options={clientOptions} />
+        <Input label="Date" type="date" value={values.date ?? ''} onChange={onFieldChange('date')} />
+        <Select
+          label="Status"
+          value={values.status ?? ORDER_STATUSES[0]}
+          onChange={onFieldChange('status')}
+          options={ORDER_STATUSES.map((status) => ({ value: status, label: status.replace('_', ' ') }))}
+        />
+        <Input
+          label="Quantity"
+          type="number"
+          min="1"
+          value={values.quantity ?? '1'}
+          onChange={onFieldChange('quantity')}
+        />
+        <Input
+          label="Unit Price (₹)"
+          type="number"
+          min="0"
+          step="0.01"
+          value={values.unit_price ?? ''}
+          onChange={onFieldChange('unit_price')}
+          placeholder="5000"
+        />
+      </div>
+      <Input
+        label="Item Description"
+        value={values.item_description ?? ''}
+        onChange={onFieldChange('item_description')}
+        placeholder="Implementation services"
+      />
+    </div>
+  );
+
+  const renderPurchaseOrderForm = () => (
+    <div className="space-y-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <Select label="Project" value={values.project_uuid ?? ''} onChange={onFieldChange('project_uuid')} options={projectOptions} />
+        <Select label="Vendor" value={values.vendor_uuid ?? ''} onChange={onFieldChange('vendor_uuid')} options={vendorOptions} />
+        <Input label="Date" type="date" value={values.date ?? ''} onChange={onFieldChange('date')} />
+        <Select
+          label="Status"
+          value={values.status ?? ORDER_STATUSES[0]}
+          onChange={onFieldChange('status')}
+          options={ORDER_STATUSES.map((status) => ({ value: status, label: status.replace('_', ' ') }))}
+        />
+        <Input
+          label="Quantity"
+          type="number"
+          min="1"
+          value={values.quantity ?? '1'}
+          onChange={onFieldChange('quantity')}
+        />
+        <Input
+          label="Unit Price (₹)"
+          type="number"
+          min="0"
+          step="0.01"
+          value={values.unit_price ?? ''}
+          onChange={onFieldChange('unit_price')}
+          placeholder="2500"
+        />
+      </div>
+      <Input
+        label="Item Description"
+        value={values.item_description ?? ''}
+        onChange={onFieldChange('item_description')}
+        placeholder="Vendor service"
+      />
+    </div>
+  );
+
+  const renderInvoiceForm = () => (
+    <div className="space-y-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <Select label="Project" value={values.project_uuid ?? ''} onChange={onFieldChange('project_uuid')} options={projectOptions} />
+        <Select label="Client" value={values.client_uuid ?? ''} onChange={onFieldChange('client_uuid')} options={clientOptions} />
+        <Select
+          label="Linked Sales Order"
+          value={values.sales_order_uuid ?? ''}
+          onChange={onFieldChange('sales_order_uuid')}
+          options={salesOrderOptions}
+        />
+        <Input label="Invoice Date" type="date" value={values.date ?? ''} onChange={onFieldChange('date')} />
+        <Input label="Due Date" type="date" value={values.due_date ?? ''} onChange={onFieldChange('due_date')} />
+        <Select
+          label="Status"
+          value={values.status ?? ORDER_STATUSES[0]}
+          onChange={onFieldChange('status')}
+          options={ORDER_STATUSES.map((status) => ({ value: status, label: status.replace('_', ' ') }))}
+        />
+        <Input
+          label="Amount (₹)"
+          type="number"
+          min="0"
+          step="0.01"
+          value={values.amount ?? ''}
+          onChange={onFieldChange('amount')}
+          placeholder="75000"
+        />
+      </div>
+      <Input
+        label="Line Description"
+        value={values.item_description ?? ''}
+        onChange={onFieldChange('item_description')}
+        placeholder="Consulting services"
+      />
+    </div>
+  );
+
+  const renderVendorBillForm = () => (
+    <div className="space-y-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <Select label="Project" value={values.project_uuid ?? ''} onChange={onFieldChange('project_uuid')} options={projectOptions} />
+        <Select label="Vendor" value={values.vendor_uuid ?? ''} onChange={onFieldChange('vendor_uuid')} options={vendorOptions} />
+        <Select
+          label="Linked Purchase Order"
+          value={values.purchase_order_uuid ?? ''}
+          onChange={onFieldChange('purchase_order_uuid')}
+          options={purchaseOrderOptions}
+        />
+        <Input label="Bill Date" type="date" value={values.date ?? ''} onChange={onFieldChange('date')} />
+        <Input label="Due Date" type="date" value={values.due_date ?? ''} onChange={onFieldChange('due_date')} />
+        <Select
+          label="Status"
+          value={values.status ?? ORDER_STATUSES[0]}
+          onChange={onFieldChange('status')}
+          options={ORDER_STATUSES.map((status) => ({ value: status, label: status.replace('_', ' ') }))}
+        />
+        <Input
+          label="Amount (₹)"
+          type="number"
+          min="0"
+          step="0.01"
+          value={values.amount ?? ''}
+          onChange={onFieldChange('amount')}
+          placeholder="32000"
+        />
+      </div>
+      <Input
+        label="Line Description"
+        value={values.item_description ?? ''}
+        onChange={onFieldChange('item_description')}
+        placeholder="Vendor charges"
+      />
+    </div>
+  );
+
+  const renderExpenseForm = () => (
+    <div className="space-y-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <Select label="Project" value={values.project_uuid ?? ''} onChange={onFieldChange('project_uuid')} options={projectOptions} />
+        <Select label="User" value={values.user_uuid ?? ''} onChange={onFieldChange('user_uuid')} options={userOptions} />
+        <Input
+          label="Amount (₹)"
+          type="number"
+          min="0"
+          step="0.01"
+          value={values.amount ?? ''}
+          onChange={onFieldChange('amount')}
+          placeholder="1500"
+        />
+        <Input label="Date" type="date" value={values.date ?? ''} onChange={onFieldChange('date')} />
+        <Select
+          label="Status"
+          value={values.status ?? EXPENSE_STATUSES[0]}
+          onChange={onFieldChange('status')}
+          options={EXPENSE_STATUSES.map((status) => ({ value: status, label: status.replace('_', ' ') }))}
+        />
+        <Select
+          label="Billable"
+          value={values.billable ?? 'true'}
+          onChange={onFieldChange('billable')}
+          options={[
+            { value: 'true', label: 'Billable' },
+            { value: 'false', label: 'Non-billable' },
+          ]}
+        />
+      </div>
+      <div>
+        <label className="block text-sm font-medium text-slate-300 mb-1.5">Description</label>
+        <textarea
+          className="w-full min-h-[120px] px-4 py-3 bg-slate-900/50 border border-slate-700/50 rounded-lg text-slate-100 focus:outline-none focus:ring-2 focus:ring-cyan-500/50 focus:border-cyan-500/50 transition-all"
+          value={values.description ?? ''}
+          onChange={onFieldChange('description')}
+          placeholder="Travel reimbursement"
+        />
+      </div>
+    </div>
+  );
+
+  const renderContent = () => {
+    switch (activeTab) {
+      case 'sales_orders':
+        return renderSalesOrderForm();
+      case 'purchase_orders':
+        return renderPurchaseOrderForm();
+      case 'invoices':
+        return renderInvoiceForm();
+      case 'bills':
+        return renderVendorBillForm();
+      case 'expenses':
+        return renderExpenseForm();
+      default:
+        return null;
+    }
+  };
+
+  const modalTitleMap: Record<string, string> = {
+    sales_orders: 'Create Sales Order',
+    purchase_orders: 'Create Purchase Order',
+    invoices: 'Create Invoice',
+    bills: 'Create Vendor Bill',
+    expenses: 'Log Expense',
+  };
+
+  return (
+    <Modal isOpen={isOpen} onClose={onClose} title={modalTitleMap[activeTab] ?? 'Create'} size="xl">
+      {loading ? (
+        <div className="flex items-center gap-3 text-slate-300">
+          <div className="w-6 h-6 border-2 border-cyan-500 border-t-transparent rounded-full animate-spin" />
+          <span>Loading reference data...</span>
+        </div>
+      ) : (
+        <>
+          {renderContent()}
+          <div className="flex justify-end gap-3 pt-6">
+            <Button variant="ghost" onClick={onClose} disabled={submitting}>
+              Cancel
+            </Button>
+            <Button onClick={onSubmit} disabled={submitting}>
+              {submitting ? 'Saving...' : 'Save'}
+            </Button>
+          </div>
+        </>
+      )}
+    </Modal>
+  );
+}
+
